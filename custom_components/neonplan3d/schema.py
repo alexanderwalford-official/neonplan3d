@@ -349,6 +349,13 @@ FURNITURE_SCHEMA = vol.Schema(
         # a neon sign: its own text and the colour of its tubes
         vol.Optional("sign_text"): vol.Any(None, vol.All(str, vol.Length(max=80))),
         vol.Optional("sign_color"): vol.Any(None, vol.Match(r"^#[0-9a-fA-F]{6}$")),
+        # fork: the generic prop and the temperature and humidity sensor (frontend/src/custom-items.ts)
+        vol.Optional("prop_shape"): vol.Any(None, vol.In(["box", "rounded", "cylinder"])),
+        vol.Optional("prop_color"): vol.Any(None, vol.Match(r"^#[0-9a-fA-F]{6}$")),
+        vol.Optional("prop_glow"): vol.Any(None, vol.Match(r"^#[0-9a-fA-F]{6}$")),
+        vol.Optional("prop_no_glow"): bool,
+        vol.Optional("temp_entity"): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        vol.Optional("humidity_entity"): vol.Any(None, vol.All(str, vol.Length(max=255))),
         vol.Optional("bin_lid"): vol.Any(None, vol.Match(r"^#[0-9a-fA-F]{6}$")),
         vol.Optional("bin_source"): vol.Any(None, vol.All(str, vol.Length(max=255))),
         vol.Optional("bin_match"): vol.Any(None, vol.All(str, vol.Length(max=120))),

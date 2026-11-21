@@ -333,6 +333,15 @@ export interface Furniture {
   color_entity?: EntityRef;
   /** Any electric item: a sensor whose value stands at its symbol – a boiler's water temperature, a humidity (D619). */
   extra?: EntityRef;
+  /** Fork, generic prop (custom-items.ts): its shape (null = box), body colour and glow colour ("#rrggbb"; null = default). */
+  prop_shape?: "box" | "rounded" | "cylinder" | null;
+  prop_color?: string | null;
+  prop_glow?: string | null;
+  /** Fork, generic prop: true = it does not glow while its linked entity is on. */
+  prop_no_glow?: boolean;
+  /** Fork, temperature and humidity sensor: any entity telling the temperature, and one telling the humidity. */
+  temp_entity?: EntityRef;
+  humidity_entity?: EntityRef;
   /** Mirrored (left-right) – an L-sofa the other way round, a cabinet with its door on the other side. */
   mirror?: boolean;
   /** LED strip: tilt about its length (°; 0 = lying flat, 90 = its face points sideways, e.g. along a roof slope). */
@@ -1559,6 +1568,9 @@ export const FURNITURE_TYPES = [
   "wifi_ap",
   "water_heater",
   "neon_sign",
+  // fork (custom-items.ts)
+  "prop",
+  "climate_sensor",
 ] as const;
 
 /** Furniture library sections (the editor lists them in this order). */
@@ -1573,7 +1585,7 @@ export const FURNITURE_GROUPS: Record<string, FurnitureType[]> = {
   vehicles: ["parking"],
   outdoor: ["awning"],
   household: ["waste_bin", "mailbox"],
-  switches: ["wall_switch", "wall_socket", "wifi_ap", "water_heater"],
+  switches: ["wall_switch", "wall_socket", "wifi_ap", "water_heater", "climate_sensor", "prop"],
 };
 
 /** Energy devices: placed and set up in the Energy tool (stored like furniture, not in the library). */
@@ -1910,6 +1922,9 @@ export const FURNITURE_SIZE: Record<FurnitureType, [number, number, number]> = {
   // a single plate; more gangs make it wider (gangPlateWidth)
   wall_switch: [0.085, 0.012, 0.085],
   wall_socket: [0.085, 0.014, 0.085],
+  // fork: a generic prop and a temperature and humidity sensor, both small cubes to start with
+  prop: [0.3, 0.3, 0.3],
+  climate_sensor: [0.06, 0.06, 0.06],
   // a ceiling access point (a UniFi disc); a standing hot water tank
   wifi_ap: [0.2, 0.2, 0.04],
   water_heater: [0.56, 0.56, 1.5],

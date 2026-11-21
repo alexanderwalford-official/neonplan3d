@@ -357,6 +357,8 @@ export function mountBase(floor: Floor, f: Pick<Furniture, "type" | "x" | "z" | 
   if (tech !== null) return tech;
   // wall lights at the usual height, LED strips just under the ceiling
   if (f.type === "lamp_wall") return WALL_LAMP_Y;
+  // fork: a temperature sensor sits on what stands under it (a shelf, a sideboard), else on the floor
+  if (f.type === "climate_sensor") return groundUnder(floor, f) + surfaceHeight(floor, f.x, f.z, f.h);
   if (LIFT_SPOTS.has(f.type)) return Math.max(0, floor.height - spotDepth(f.type, f.h));
   if (f.type === "led_strip") {
     // under the ceiling of the room it lies in: in a room with a ceiling of its own, lower than the floor's height,

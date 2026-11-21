@@ -26,6 +26,7 @@ import { weatherEntity, isRainSource } from "../weather.ts";
 import { isOutageSource } from "../outage.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { hasFeature, labOn, manualUrl, registerUrl, released, shopUrl, UNRELEASED } from "../features.ts";
+import { CLIMATE_SENSOR, CUSTOM_TYPES, PROP_GLOW, PROP_SHAPES, propColor, propGlow, propShape, refOf } from "../custom-items.ts";
 import { fitText, type HintKey } from "../fit-hints.ts";
 import { FINISH_ROLES, FINISH_SWATCHES, finishHex, finishRolesOf, type FinishRole } from "../finishes.ts";
 import { hasLiveParts, type PackSlot } from "../live-parts.ts";
@@ -249,7 +250,7 @@ const WALL_CATS: Record<string, string[]> = {
   tall: ["kitchen_tall", "fridge", "wardrobe", "tall_cabinet", "shelf", "coat_rack"],
   living: ["sofa", "armchair", "bed", "bunk_bed", "bench", "corner_bench", "plant"],
   light: ["lamp_wall", "lamp_floor", "led_strip", "lamp_table"],
-  switches: ["wall_switch", "wall_socket", "wifi_ap", "water_heater"],
+  switches: ["wall_switch", "wall_socket", "wifi_ap", "water_heater", "climate_sensor", "prop"],
 };
 /** Hanging pieces (they go into a gap high on the wall). */
 const HANGING = new Set(["kitchen_wall", "tv_wall", "lamp_wall", "shelf", "led_strip", "ac_unit"]);
@@ -365,7 +366,7 @@ function pathLengthOf(p: PoolPipe, nodeAt: (n: string) => { x: number; z: number
 const ARROWS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 
 // furniture without a top to light: no "State from" box
-const NO_STATE_TYPES = new Set(["parking", "stairwell", "rug", "grid_point", "waste_bin", "mailbox", "wall_switch", "wall_socket", "wifi_ap", "water_heater"]);
+const NO_STATE_TYPES = new Set(["parking", "stairwell", "rug", "grid_point", "waste_bin", "mailbox", "wall_switch", "wall_socket", "wifi_ap", "water_heater", ...CUSTOM_TYPES]);
 
 /** A gas or water meter from a pack (its reading in m³ or litres, no power): family "meter" tagged gas or water. */
 function volumeMeter(type: string): boolean {
@@ -12158,7 +12159,7 @@ export class Fp3dEditor extends LitElement {
             >
           </div>`
         : nothing}
-      ${isElectric(f.type) ? this.renderFurnitureLinks(f) : !NO_STATE_TYPES.has(f.type) ? html`<div class="fp3d-form fp3d-links">${this.renderStateLinks(f)}</div>` : nothing} ${GANG_TYPES.has(f.type) ? this.renderGangsForm(f) : nothing} ${TECH_TYPES.has(f.type) ? this.renderTechForm(f) : nothing} ${f.type === "parking" ? this.renderParkingForm(f) : nothing} ${f.type === "neon_sign" ? this.renderSignForm(f) : nothing} ${f.type === "waste_bin" || f.type === "mailbox" ? this.renderHouseholdForm(f) : this.renderHouseholdExtras(f)}
+      ${isElectric(f.type) ? this.renderFurnitureLinks(f) : !NO_STATE_TYPES.has(f.type) ? html`<div class="fp3d-form fp3d-links">${this.renderStateLinks(f)}</div>` : nothing} ${GANG_TYPES.has(f.type) ? this.renderGangsForm(f) : nothing} ${TECH_TYPES.has(f.type) ? this.renderTechForm(f) : nothing} ${CUSTOM_TYPES.has(f.type) ? this.renderCustomForm(f) : nothing} ${f.type === "parking" ? this.renderParkingForm(f) : nothing} ${f.type === "neon_sign" ? this.renderSignForm(f) : nothing} ${f.type === "waste_bin" || f.type === "mailbox" ? this.renderHouseholdForm(f) : this.renderHouseholdExtras(f)}
       ${this.renderShowIf(f)}
       ${this.renderModuleFurnitureFields(f)}
       ${f.type.startsWith("pack:mastershort.vehicles:") && this.isAdmin
@@ -13021,6 +13022,55 @@ export class Fp3dEditor extends LitElement {
   }
 
   /** Wi-Fi access point (D582) and water heater: how it is mounted and its entities. */
+  /** Fork (custom-items.ts): the generic prop's shape, colours and entities; the climate sensor's two entities. */
+  private renderCustomForm(f: Furniture) {
+    if (!this.hass) return nothing;
+    const admin = this.isAdmin;
+    const any = this.entityOptions(ANY_ENTITY);
+    const pick = (v: string | null) => (v && v !== "none" ? v : null);
+    const colour = (label: string, value: string, own: boolean, set: (v: string | null) => void) =>
+      html`<label class="fp3d-field"
+        >${label}
+        <span style="display:flex;gap:6px;align-items:center"
+          ><input type="color" .value=${value} ?disabled=${!admin} @change=${(e: Event) => set((e.target as HTMLInputElement).value)} />
+          ${own ? html`<button class="fp3d-btn fp3d-field-btn" ?disabled=${!admin} @click=${() => set(null)}>${this.t("prop_default" as I18nKey)}</button>` : nothing}</span
+        ></label
+      >`;
+    const looks = colour(this.t("prop_color" as I18nKey), propColor(f), !!f.prop_color, (v) => this.updateFurniture({ prop_color: v }));
+    const tail = html`<div class="fp3d-form">${this.markerSelect(f.marker ?? null, (v) => this.updateFurniture({ marker: v }))}${this.iconInput(f.icon, (v) => this.updateFurniture({ icon: v }))}</div>`;
+    if (f.type === CLIMATE_SENSOR) {
+      return html`<div class="fp3d-form fp3d-links">
+        ${looks}
+        ${this.entitySelect(this.t("sensor_temp" as I18nKey), refOf(f.temp_entity), undefined, any, (v) => this.updateFurniture({ temp_entity: pick(v) }))}
+        ${this.entitySelect(this.t("sensor_humidity" as I18nKey), refOf(f.humidity_entity), undefined, any, (v) => this.updateFurniture({ humidity_entity: pick(v) }))}
+        <p class="fp3d-sub fp3d-wide">${this.t("sensor_hint" as I18nKey)}</p>
+        ${tail}
+      </div>`;
+    }
+    return html`<div class="fp3d-form fp3d-links">
+      <label class="fp3d-field"
+        >${this.t("prop_shape" as I18nKey)}
+        <select ?disabled=${!admin} @change=${(e: Event) => this.updateFurniture({ prop_shape: ((e.target as HTMLSelectElement).value || null) as Furniture["prop_shape"] })}>
+          ${PROP_SHAPES.map((s) => html`<option value=${s === "box" ? "" : s} ?selected=${propShape(f) === s}>${this.t(`prop_shape_${s}` as I18nKey)}</option>`)}
+        </select></label
+      >
+      ${looks}
+      ${this.entitySelect(this.t("prop_entity" as I18nKey), refOf(f.entity), undefined, any, (v) => this.updateFurniture({ entity: pick(v) ?? "none" }))}
+      ${this.entitySelect(this.t("prop_value" as I18nKey), refOf(f.extra), undefined, any, (v) => this.updateFurniture({ extra: pick(v) }))}
+      ${f.prop_no_glow ? nothing : colour(this.t("prop_glow" as I18nKey), propGlow(f) ?? PROP_GLOW, !!f.prop_glow, (v) => this.updateFurniture({ prop_glow: v }))}
+      <label class="fp3d-check"
+        ><input type="checkbox" .checked=${!!f.prop_no_glow} ?disabled=${!admin} @change=${(ev: Event) => this.updateFurniture({ prop_no_glow: (ev.target as HTMLInputElement).checked || undefined })} />
+        ${this.t("prop_no_glow" as I18nKey)}</label
+      >
+      <label class="fp3d-check" title=${this.t("device_confirm_hint")}
+        ><input type="checkbox" .checked=${!!f.confirm} ?disabled=${!admin} @change=${(ev: Event) => this.updateFurniture({ confirm: (ev.target as HTMLInputElement).checked })} />
+        ${this.t("device_confirm")}</label
+      >
+      <p class="fp3d-sub fp3d-wide">${this.t("prop_hint" as I18nKey)}</p>
+      ${tail}
+    </div>`;
+  }
+
   private renderTechForm(f: Furniture) {
     if (!this.hass) return nothing;
     const admin = this.isAdmin;

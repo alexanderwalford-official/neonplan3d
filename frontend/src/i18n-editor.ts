@@ -1148,6 +1148,23 @@ export const deEditor = {
   diag_deleted: "Gelöscht. Das Senden ist aus; schaltest du es wieder ein, gibt es eine neue Kennung.",
   diag_delete_failed: "Der NeonPlan-Server war nicht erreichbar. Bitte später noch einmal versuchen.",
   diag_unavailable: "Diese Einstellung gibt es nach einem Neustart von Home Assistant.",
+  // fork (custom-items.ts)
+  prop_shape: "Form",
+  prop_shape_box: "Quader",
+  prop_shape_rounded: "Abgerundet",
+  prop_shape_cylinder: "Zylinder",
+  prop_color: "Farbe",
+  prop_glow: "Leuchtfarbe, solange an",
+  prop_no_glow: "Nicht leuchten",
+  prop_default: "Standard",
+  prop_entity: "Verknüpfte Entität (beliebig)",
+  prop_value: "Wert am Symbol (beliebige Entität)",
+  prop_hint:
+    "Größe, Drehung und Höhe stellst du oben ein. Ein Tipp auf das Objekt schaltet die verknüpfte Entität oder öffnet sie; solange sie an ist, leuchtet es (ein Licht in seiner eigenen Farbe).",
+  sensor_temp: "Temperatur (beliebige Entität)",
+  sensor_humidity: "Luftfeuchtigkeit (beliebige Entität)",
+  sensor_hint:
+    "Ein Sensor, ein Thermostat oder das Wetter: Der Wert oder sein Attribut (current_temperature, humidity) wird angezeigt. Ohne eigene Feuchte-Entität nimmt er die Feuchte der Temperatur-Entität, wenn sie eine hat.",
 };
 
 export type EditorKey = keyof typeof deEditor;
@@ -2296,6 +2313,23 @@ const enEditor: Record<EditorKey, string> = {
   diag_deleted: "Deleted. Sending is off; if you switch it on again, you get a new id.",
   diag_delete_failed: "The NeonPlan server could not be reached. Please try again later.",
   diag_unavailable: "This setting is available after a restart of Home Assistant.",
+  // fork (custom-items.ts)
+  prop_shape: "Shape",
+  prop_shape_box: "Box",
+  prop_shape_rounded: "Rounded",
+  prop_shape_cylinder: "Cylinder",
+  prop_color: "Colour",
+  prop_glow: "Glow colour while on",
+  prop_no_glow: "Don't glow",
+  prop_default: "Default",
+  prop_entity: "Linked entity (any)",
+  prop_value: "Value at its symbol (any entity)",
+  prop_hint:
+    "Set its size, rotation and height above. A tap on the prop switches or opens the linked entity; while it is on, the prop glows (a light in its own colour).",
+  sensor_temp: "Temperature (any entity)",
+  sensor_humidity: "Humidity (any entity)",
+  sensor_hint:
+    "A sensor, a thermostat or the weather: its value or attribute (current_temperature, humidity) is shown. Without a humidity entity of its own it takes the temperature entity's humidity, when it has one.",
 };
 
 addTexts(deEditor, enEditor);

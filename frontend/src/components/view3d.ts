@@ -133,6 +133,7 @@ import { OSM_COPYRIGHT } from "../surroundings.ts";
 import { coverPositionable, lightAbilities } from "./quick-menu.ts";
 import "./quick-menu.ts";
 import { load3d } from "../load3d.ts";
+import { CLIMATE_SENSOR, CUSTOM_TYPES, climateReading, customEntities, hexToRgb, propGlow, refOf } from "../custom-items.ts";
 import { loadFun } from "../load-fun.ts";
 import { detectionKind, scaleGlow, buildMarkers, cameraMotionSensors, openMoreInfo, setCameraSensors, stateText, toggleEntity } from "../markers.ts";
 import { activeSections, roofUnderAt, sectionAbove, sectionCutsBelow } from "../roof-sections.ts";
@@ -3086,6 +3087,19 @@ export class Fp3dView3d extends LitElement {
           }
           continue;
         }
+        if (CUSTOM_TYPES.has(f.type)) {
+          // fork: the generic prop and the temperature and humidity sensor (custom-items.ts)
+          const pin = this.customItem(hass, floor, f, screens, taken);
+          if (pin) {
+            markers.push(pin);
+            targets.set(f.id, pin.id);
+          } else {
+            // its entity already has a pin (a lamp linked to the same light): a tap on the item still reaches it
+            const id = customEntities(f)[0];
+            if (id) targets.set(f.id, id);
+          }
+          continue;
+        }
         if (TECH_TYPES.has(f.type)) {
           const pin = this.techItem(hass, floor, f, screens, taken);
           if (pin) {
@@ -3572,6 +3586,78 @@ export class Fp3dView3d extends LitElement {
       show: f.marker ?? undefined,
       // its temperature is worth a pin
       energyDevice: temp !== null,
+    };
+  }
+
+  /**
+   * Fork (custom-items.ts): the pin of a generic prop or a temperature and humidity sensor.
+   * Prop: its linked entity (any kind) – a tap switches or opens it, the prop glows while it is on – and the value of
+   * its extra sensor. Sensor: "21.4 °C · 48 %" from its two entities; a tap opens the temperature entity.
+   */
+  private customItem(hass: HomeAssistant, floor: Floor, f: Furniture, screens: Map<string, ScreenState>, taken: Set<string>): (DeviceMarker & { fromFurniture: boolean; energyDevice?: boolean }) | null {
+    const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
+    const base = {
+      floorId: floor.id,
+      roomId: room?.id ?? null,
+      x: f.x,
+      z: f.z,
+      y: mountBase(floor, f) + f.h + 0.15,
+      ownName: f.name || undefined,
+      showName: !!f.show_name,
+      glow: null,
+      furnitureId: f.id,
+      fromFurniture: true,
+      show: f.marker ?? undefined,
+    };
+    if (f.type === CLIMATE_SENSOR) {
+      const tempId = refOf(f.temp_entity);
+      const humId = refOf(f.humidity_entity);
+      const { temp, humidity } = climateReading(f, hass.states);
+      const parts = [
+        temp ? `${formatNumber(hass, Math.round(temp.value * 10) / 10, 1)} ${temp.unit}` : "",
+        humidity !== null ? `${formatNumber(hass, Math.round(humidity), 0)} %` : "",
+      ].filter(Boolean);
+      const id = tempId ?? humId;
+      if (!id || taken.has(id)) return null;
+      taken.add(id);
+      const st = hass.states[id];
+      return {
+        ...base,
+        id,
+        icon: mdiIcon(f.icon || "thermometer-water"),
+        name: f.name || entityName(hass, id),
+        text: parts.join(" · ") || (st ? stateText(hass, st) : ""),
+        active: false,
+        unavailable: st ? isUnavailable(st) : true,
+        // its values are worth a pin
+        energyDevice: parts.length > 0,
+      };
+    }
+    const main = refOf(f.entity);
+    const extraId = refOf(f.extra);
+    const st = main ? hass.states[main] : undefined;
+    const on = !!st && isActive(st);
+    const own = propGlow(f);
+    if (on && own) {
+      // a light without a glow colour of its own lends the prop its colour
+      const lit = !f.prop_glow && kindOf(st.entity_id) === "light" ? lightGlow(st) : null;
+      const color = lit ? lit.color : hexToRgb(own);
+      screens.set(f.id, { color, level: 0.85, faces: [{ part: "plate", color, level: 0.85 }] });
+    }
+    const id = main ?? extraId;
+    if (!id || taken.has(id)) return null;
+    taken.add(id);
+    const extraSt = extraId ? hass.states[extraId] : undefined;
+    const extraText = extraSt ? stateText(hass, extraSt) : "";
+    const mainText = st ? stateText(hass, st) : "";
+    return {
+      ...base,
+      id,
+      icon: mdiIcon(f.icon || "cube-outline"),
+      name: f.name || entityName(hass, id),
+      text: main && extraId ? [mainText, extraText].filter(Boolean).join(" · ") : main ? mainText : extraText,
+      active: on,
+      unavailable: st ? isUnavailable(st) : false,
     };
   }
 

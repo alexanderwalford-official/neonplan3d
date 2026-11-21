@@ -443,3 +443,24 @@ def test_surroundings_from_the_map_are_kept_and_checked() -> None:
     assert picked["hide"] == [0] and picked["flat"] is True
     with pytest.raises(vol.Invalid):
         SETTINGS_SCHEMA({**base, "surroundings": {**surroundings, "hide": [-1]}})
+
+
+def test_fork_custom_items_keep_their_fields() -> None:
+    """Fork: the generic prop and the climate sensor keep their shape, colours and entities; bad values are refused."""
+    prop = {"id": "p1", "type": "prop", "x": 0, "z": 0, "rotation": 0, "w": 0.3, "d": 0.3, "h": 0.3, "variant": None}
+    kept = FURNITURE_SCHEMA(
+        {**prop, "prop_shape": "cylinder", "prop_color": "#ff8800", "prop_glow": "#00ffcc", "prop_no_glow": True}
+    )
+    assert (kept["prop_shape"], kept["prop_color"], kept["prop_glow"], kept["prop_no_glow"]) == (
+        "cylinder",
+        "#ff8800",
+        "#00ffcc",
+        True,
+    )
+    sensor = FURNITURE_SCHEMA(
+        {**prop, "type": "climate_sensor", "temp_entity": "sensor.t", "humidity_entity": "climate.living"}
+    )
+    assert (sensor["temp_entity"], sensor["humidity_entity"]) == ("sensor.t", "climate.living")
+    for bad in ({"prop_shape": "sphere"}, {"prop_color": "orange"}, {"prop_glow": "#12345"}):
+        with pytest.raises(vol.Invalid):
+            FURNITURE_SCHEMA({**prop, **bad})

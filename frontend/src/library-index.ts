@@ -200,6 +200,9 @@ const BASIC: Record<string, [Kind, Room[]]> = {
   wall_socket: ["tech", []],
   wifi_ap: ["tech", []],
   water_heater: ["heating", ["utility", "bath", "garage"]],
+  // fork (custom-items.ts)
+  prop: ["deco", []],
+  climate_sensor: ["tech", []],
 };
 
 /** The built-in kinds the library offers (the pool devices stand in Pool Pro's tools, energy devices in the energy tool). */

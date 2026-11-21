@@ -14,6 +14,7 @@ import type { Floor } from "../model.ts";
 import { ALWAYS, DEG, EDGE_TOP, GeoBuffer, LineBuffer, pushLoft, pushLyingCyl, pushPrism, shade } from "./geo.ts";
 import { hexColor, naturalPalette, palette } from "./palette.ts";
 import { finishTargetOf, finishTargets } from "../finishes.ts";
+import { CLIMATE_SENSOR, propColor, propShape } from "../custom-items.ts";
 
 const BASE = palette({
   body: 0x172238,
@@ -609,6 +610,26 @@ function waterHeater(b: Builder, w: number, d: number, h: number, wall: boolean)
     b.cyl(Math.cos(a) * r * 0.7, Math.sin(a) * r * 0.7, 0.03, 0, 0.04, C.dark, C.dark, 6);
   }
   b.box(-r * 0.3, r * 0.3, h * 0.55, h * 0.65, r - 0.01, r + 0.01, C.dark);
+}
+
+/**
+ * Fork (custom-items.ts): a generic prop – a box, rounded box or cylinder in its own colour – or a temperature and
+ * humidity sensor, a small rounded cube with a dark display on its front.
+ */
+function customItem(b: Builder, f: Furniture, w: number, d: number, h: number): void {
+  const hex = propColor(f);
+  // like a waste bin: the light looks keep the colour bright, the dark ones tone it down to sit in the neon
+  const mx = Math.max(...new Color(hex).toArray());
+  const body = lightLook ? tone(hex, mx > 0.05 ? Math.max(1, 0.62 / mx) : 1) : tone(hex, 0.55);
+  const top = lightLook ? tone(hex, mx > 0.05 ? Math.max(1.1, 0.7 / mx) : 1.1) : tone(hex, 0.75);
+  const shape = propShape(f);
+  if (shape === "cylinder") b.cyl(0, 0, Math.min(w, d) / 2, 0, h, body, top, 24, EDGE_FURN);
+  else if (shape === "rounded") b.pad(-w / 2, w / 2, 0, h, -d / 2, d / 2, body, top, Math.max(0.003, Math.min(0.05, Math.min(w, d, h) * 0.18)), EDGE_FURN);
+  else b.box(-w / 2, w / 2, 0, h, -d / 2, d / 2, body, top, EDGE_FURN);
+  if (f.type === CLIMATE_SENSOR) {
+    // the little display on its front
+    b.box(-w * 0.32, w * 0.32, h * 0.38, h * 0.82, d / 2, d / 2 + Math.max(0.001, d * 0.03), C.dark);
+  }
 }
 
 /** A mailbox in its local shape. */
@@ -1741,6 +1762,11 @@ function buildModel(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f: Fur
       if (lift > 0) return; // hangs on the wall: no shadow on the floor
       break;
     }
+    case "prop":
+    case "climate_sensor":
+      // fork: drawn on the floor; pushUpright lifts it to its mount height (no shadow up there)
+      customItem(b, f, w, d, h);
+      break;
     case "wifi_ap":
       // under the ceiling or on the wall: lifted by its mount height, no shadow
       wifiAp(b, w, d, h, f.variant === "wall");
