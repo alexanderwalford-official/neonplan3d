@@ -26,7 +26,7 @@
         localStorage.setItem("neonplan3d.flows", params.has("flows") ? "1" : "0");
       } catch {}
       // the demo always opens in Neon, whatever style a visitor picked last time (?style=<id> opens another one)
-      const DEMO_STYLES = ["neon", "blueprint", "day", "focus", "synth", "cozy", "evening", "winter", "model", "pastel", "warm"];
+      const DEMO_STYLES = ["neon", "blueprint", "day", "focus", "synth", "cozy", "evening", "winter", "model", "pastel", "warm", "real"];
       try {
         const wanted = params.get("style");
         localStorage.setItem("neonplan3d.theme", DEMO_STYLES.includes(wanted) ? wanted : "neon");

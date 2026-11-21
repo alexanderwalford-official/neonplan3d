@@ -42,6 +42,8 @@ export interface StyleDef {
   cutDark?: boolean;
   /** Evening: the house dims warm, lit lamps keep their glow (0–0.9, natural materials). */
   dim?: number;
+  /** Fork: the light follows the real sun and weather (live-light.ts) instead of a fixed direction (natural materials). */
+  live?: boolean;
   /** The stage behind the house: top and bottom of a gradient. */
   bg?: [string, string] | null;
   /** The menu group. */
@@ -81,6 +83,8 @@ export const STYLES: StyleDef[] = [
   { id: "cozy", base: "day", group: "homely", ...NATURAL, palette: null, bg: ["#f1efeb", "#d9d5ce"], aliases: ["wohnlich", "gemütlich", "cozy", "homely", "echt", "real"] },
   { id: "evening", base: "neon", group: "homely", ...NATURAL, sun: 0.4, dim: 0.75, bg: ["#14161c", "#272630"], aliases: ["wohnlich abend", "abend", "abendstimmung", "evening", "cozy evening"] },
   { id: "winter", base: "neon", group: "homely", ...NATURAL, sun: 0.4, dim: 0.8, bg: ["#0b1322", "#1d2a40"], aliases: ["winterabend", "winter", "advent", "weihnachten", "christmas"] },
+  // fork: natural materials lit by the real sun and weather – day, golden hour, dusk and night by themselves
+  { id: "real", base: "day", group: "homely", ...NATURAL, sun: 0, live: true, bg: ["#c9d6e4", "#e8e3da"], aliases: ["realistisch", "realistic", "lebensecht", "live"] },
   {
     id: "model",
     base: "day",

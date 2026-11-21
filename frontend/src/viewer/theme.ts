@@ -119,7 +119,20 @@ export function makeStyleUniforms() {
     uStAO: { value: 0 },
     uStDim: { value: 0 },
     uStFloors: { value: 0 },
+    // fork: the "Realistic" style's light from the real sun and weather (live-light.ts): on/off, the direction
+    // towards the sun, the direct sunlight and the light from the sky (colour × strength each)
+    uStLive: { value: 0 },
+    uLiveDir: { value: new Vector3(-0.45, 0.8, 0.4).normalize() },
+    uLiveDirect: { value: new Vector3(0.45, 0.44, 0.41) },
+    uLiveSky: { value: new Vector3(0.62, 0.65, 0.7) },
   };
+}
+
+/** Fork: puts the live light (live-light.ts) into a view's style numbers. */
+export function applyLiveLight(light: { dir: [number, number, number]; direct: [number, number, number]; sky: [number, number, number] }, u: StyleUniforms = styleUniforms): void {
+  u.uLiveDir.value.set(...light.dir);
+  u.uLiveDirect.value.set(...light.direct);
+  u.uLiveSky.value.set(...light.sky);
 }
 export type StyleUniforms = ReturnType<typeof makeStyleUniforms>;
 /** The set of views that bring none of their own. */
@@ -150,6 +163,7 @@ export function applyStyleUniforms(s: StyleDef, u: StyleUniforms = styleUniforms
   u.uStAO.value = s.ao ?? 0;
   u.uStDim.value = s.natural ? (s.dim ?? 0) : 0;
   u.uStFloors.value = s.natural ? (s.floors ?? 0) : 0;
+  u.uStLive.value = s.natural && s.live ? 1 : 0;
 }
 
 /** Where a floor lies in the world, per material (for the darker wall feet and the floor structure). */
@@ -183,6 +197,10 @@ uniform float uStSun;
 uniform float uStAO;
 uniform float uStDim;
 uniform float uStFloors;
+uniform float uStLive;
+uniform vec3 uLiveDir;
+uniform vec3 uLiveDirect;
+uniform vec3 uLiveSky;
 uniform float uFloorY;
 varying vec3 vFp3dWorld;
 #ifdef FP3D_LIT
@@ -234,6 +252,8 @@ vec3 fp3dThemedAs(vec3 c, bool line, bool accent, int look) {
   float mn = min(c.r, min(c.g, c.b));
   float sat = mx > 0.0 ? (mx - mn) / mx : 0.0;
   if (look == ${STYLE_LOOK}) {
+    // fork, live light: the edges fade with the daylight instead of standing out at night
+    if (line && uStLive > 0.5) return uStLine * clamp(mx * 1.4, 0.55, 1.0) * min(vec3(1.0), uLiveSky * 1.25 + uLiveDirect * 0.35);
     if (line) return uStLine * clamp(mx * 1.4, 0.55, 1.0);
     // lit lamps, screens, open windows keep their colour – but not the green of plants, which only looks like one
     bool signal = mx > 0.45 && sat > 0.45 && !(c.g > c.r * 1.25 && c.g > c.b * 1.25);
@@ -246,6 +266,9 @@ vec3 fp3dThemedAs(vec3 c, bool line, bool accent, int look) {
       // neon leftovers the natural palette does not reach (dark navy lamp bodies, small devices) turn neutral grey
       vec3 cc = (mx < 0.2 && c.b > c.r * 2.0 && c.b > c.g * 1.5) ? vec3(0.32 + dot(c, vec3(0.3, 0.59, 0.11)) * 1.4) : c;
       cc *= fp3dStyleLight(n) * fp3dStyleFloor(cc, n);
+      // fork, live light: the sky lights every face (tops a little more), the real sun those turned towards it;
+      // lit lamps (above) and signal colours (screens, open windows) keep their own glow
+      if (uStLive > 0.5 && !signal) cc *= uLiveSky * (0.82 + 0.18 * max(n.y, 0.0)) + uLiveDirect * max(dot(n, uLiveDir), 0.0);
       // evening: the house dims warm, lit lamps and screens keep their glow
       if (uStDim > 0.0 && !signal) cc *= mix(vec3(1.0), vec3(0.62, 0.52, 0.42), uStDim) * (1.0 - 0.75 * uStDim);
       return cc;

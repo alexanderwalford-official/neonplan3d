@@ -44,7 +44,8 @@ import { buildSolarLive, solarLiveMaterial, writeSolarLevels, type SolarLive } f
 import { dotTexture, roofLightPoints, roofSnowGeometry } from "./snow.ts";
 import { Firework } from "./firework.ts";
 import { buildPools, disposePools, type PoolPiece } from "./pool-water.ts";
-import { accentOnUniform, accentUniform, applyStyleUniforms, floorLevelUniform, LIT_ATTRIBUTE, makeMorphMask, makeStyleUniforms, MORPH_ATTRIBUTE, MORPH_MASK_GLSL, MORPH_POLY_MAX, morphMaskUniforms, parseAccent, lineBlending, setMorphDefine, STYLE_LOOK, themed, themeIndex, type Theme, type ThemeUniform } from "./theme.ts";
+import { liveLight } from "../live-light.ts";
+import { accentOnUniform, accentUniform, applyLiveLight, applyStyleUniforms, floorLevelUniform, LIT_ATTRIBUTE, makeMorphMask, makeStyleUniforms, MORPH_ATTRIBUTE, MORPH_MASK_GLSL, MORPH_POLY_MAX, morphMaskUniforms, parseAccent, lineBlending, setMorphDefine, STYLE_LOOK, themed, themeIndex, type Theme, type ThemeUniform } from "./theme.ts";
 import { styleById, type StyleDef } from "../looks.ts";
 import { hexColor, setNaturalPalette } from "./palette.ts";
 
@@ -970,6 +971,8 @@ export class FloorplanViewer {
     this.lastWake = performance.now();
     this.building = building;
     this.controls.rightClickBack = !!building.settings.right_click_back;
+    // fork: the plan's north turns the live light with it
+    this.applyLive();
     this.placeRealSky();
     // this bundle's own copy of the ground (outdoor areas, earth around cellars)
     setTerrain(building);
@@ -1769,6 +1772,7 @@ export class FloorplanViewer {
     const plain = !style.palette && !style.natural;
     this.themeUniform.value = plain ? themeIndex(style.base) : STYLE_LOOK;
     applyStyleUniforms(style, this.themeUniform.style);
+    this.applyLive();
     // a zoom style keeps the style numbers for its near look; a style of its own as the far look ends it
     const zoomUsable = this.zoomWanted && !style.palette && !style.natural ? this.zoomWanted : null;
     if (JSON.stringify(zoomUsable) !== JSON.stringify(this.zoomStyle)) {
@@ -1854,9 +1858,20 @@ export class FloorplanViewer {
     this.invalidate();
   }
 
+  /**
+   * Fork: the "Realistic" style's light from the real sun and weather (live-light.ts). Only shader numbers: nothing
+   * is rebuilt, so it can follow every change of sun.sun and the weather entity.
+   */
+  private applyLive(): void {
+    if (!this.style?.live) return;
+    const w = this.weather;
+    applyLiveLight(liveLight(this.sun, this.building?.settings.north ?? 0, w ? { cloud: w.cloud, rain: w.rain, snow: w.snow, fog: w.fog } : null), this.themeUniform.style);
+  }
+
   /** Position of the sun; sunlight falls through windows facing it. */
   setSun(sun: SunState | null): void {
     this.sun = sun;
+    this.applyLive();
     for (const fv of this.floors) this.buildSun(fv);
     const night = this.nightFactor().toFixed(2);
     if (night !== this.spillNight) {
@@ -1881,6 +1896,7 @@ export class FloorplanViewer {
   /** Weather outside: particles over the plot, fog, a dimmer sun; nothing on the tablet level but the dimming. */
   setWeather(weather: WeatherView | null): void {
     this.weather = weather;
+    this.applyLive();
     for (const fv of this.floors) this.buildSun(fv);
     this.applyWeather();
     this.placeSky();
@@ -2121,7 +2137,8 @@ export class FloorplanViewer {
       else this.sunFx.hideShadow();
     }
     const path = this.sunPath;
-    const arc = on && !!path && path.points.length > 1 && sun.elevation > -3;
+    // fork: the realistic style keeps the real shadow but leaves out the glowing arc and compass ring
+    const arc = on && !this.style?.live && !!path && path.points.length > 1 && sun.elevation > -3;
     const frame = arc ? this.arcFrame() : null;
     const arcSig = arc && frame ? `${this.theme},${sun.elevation.toFixed(1)},${sun.azimuth.toFixed(1)},${this.compassLetters.join("")},${this.hourCycle.hourCycle ?? ""},${path.points[0].t},${north},${frame.x.toFixed(2)},${frame.z.toFixed(2)},${frame.y.toFixed(2)},${frame.r.toFixed(2)},${cloud.toFixed(1)}` : "";
     if (arcSig === this.arcSig) return;
