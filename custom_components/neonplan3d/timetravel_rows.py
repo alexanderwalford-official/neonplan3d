@@ -237,9 +237,25 @@ def car_state(state: str) -> str:
     return state if state in ("home", "unavailable", "unknown") else "not_home"
 
 
+# Fork: Pro features whose code is in this repository, on without a pack (matches BUILT_IN_UNLOCKED in features.ts)
+BUILT_IN_UNLOCKED = frozenset(
+    {
+        "camera_cockpit",
+        "weather",
+        "screens",
+        "energy_pro",
+        "sound",
+        "auto_pro",
+        "time_travel",
+        "household",
+        "fridge_smart",
+    }
+)
+
+
 def has_feature(packs: Iterable[Mapping[str, Any]], feature: str) -> bool:
-    """Whether an installed pack unlocks a Pro feature."""
-    return any(feature in (pack.get("features") or []) for pack in packs)
+    """Whether a Pro feature is on: built in (this fork) or unlocked by an installed pack."""
+    return feature in BUILT_IN_UNLOCKED or any(feature in (pack.get("features") or []) for pack in packs)
 
 
 def has_time_travel(packs: Iterable[Mapping[str, Any]]) -> bool:

@@ -11,9 +11,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
+import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.neonplan3d import packs, timetravel
+from custom_components.neonplan3d import packs, timetravel, timetravel_rows
 from custom_components.neonplan3d.const import DOMAIN
 from custom_components.neonplan3d.timetravel_rows import (
     MAX_ROWS,
@@ -158,7 +159,7 @@ def test_a_car_tracker_says_home_or_away_only() -> None:
 
 def test_the_pack_feature_unlocks_time_travel() -> None:
     assert has_time_travel([{"features": ["energy_pro"]}, {"features": ["time_travel"]}])
-    assert not has_time_travel([{"features": ["energy_pro"]}, {"features": None}, {}])
+    assert has_time_travel([{"features": ["energy_pro"]}, {"features": None}, {}])  # fork: built in
     assert "time_travel" in packs.KNOWN_FEATURES
 
 
@@ -194,7 +195,8 @@ def test_car_trackers_come_from_the_parking_spots() -> None:
     assert seeds == {"binary_sensor.spot2", "sensor.ev_soc", "sensor.spot4"}
     assert car_refs({}) == (set(), set())
     assert has_feature([{"features": ["auto_pro"]}], "auto_pro")
-    assert not has_feature([{"features": ["time_travel"]}], "auto_pro")
+    assert has_feature([], "auto_pro")  # fork: built in
+    assert not has_feature([], "frames")
 
 
 async def _setup(hass: HomeAssistant) -> None:
@@ -216,6 +218,13 @@ def _msg(**over: Any) -> dict[str, Any]:
     }
 
 
+@pytest.fixture
+def no_built_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fork: switch the built-in Pro features off, so a test checks the pack path of upstream."""
+    monkeypatch.setattr(timetravel_rows, "BUILT_IN_UNLOCKED", frozenset())
+
+
+@pytest.mark.usefixtures("no_built_in")
 async def test_history_needs_the_pro_add_on(hass: HomeAssistant, hass_ws_client) -> None:
     await _setup(hass)
     client = await hass_ws_client(hass)
@@ -342,6 +351,7 @@ class _Instance:
         return func(*args)
 
 
+@pytest.mark.usefixtures("no_built_in")
 async def test_history_without_auto_pro_has_no_cars(hass: HomeAssistant, hass_ws_client) -> None:
     """Without Auto Pro no tracker is answered, even one on a parking spot."""
     await _setup(hass)

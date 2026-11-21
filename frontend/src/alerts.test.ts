@@ -140,7 +140,7 @@ test("the outage picker offers grid and UPS sources, not switches or meters (#83
   assert.equal(isOutage(st("sensor.grid_connection_status", "On Grid")), false);
 });
 
-test("Haushalt Pro warns when a fridge door stands open too long", async () => {
+test("Haushalt Pro (built in, fork) warns when a fridge door stands open too long", async () => {
   const { setPacks } = await import("./packs.ts");
   const open = new Date(Date.now() - 5 * 60_000).toISOString();
   const hass = {
@@ -154,8 +154,6 @@ test("Haushalt Pro warns when a fridge door stands open too long", async () => {
   floor.furniture = [{ id: "f1", type: "fridge", x: 1, z: 1, rotation: 0, w: 0.6, d: 0.65, h: 1.8, variant: null, door_left: "binary_sensor.kuehlschrank" }];
   b.floors = [floor];
   setPacks([]);
-  assert.deepEqual(findAlerts(hass, b, alertSources(hass, b), new Map()), []);
-  setPacks([{ id: "pro", name: "Pro", items: [], features: ["household"] } as never]);
   const sources = alertSources(hass, b);
   assert.ok(alertEntities(sources).includes("binary_sensor.kuehlschrank"));
   const alerts = findAlerts(hass, b, sources, new Map());

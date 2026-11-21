@@ -114,8 +114,18 @@ export function manualUrl(lang: string | undefined, topic?: Feature | "extension
   return `${base}${page}?lang=${de ? "de" : "en"}${anchor ? `#${anchor}` : ""}`;
 }
 
+/**
+ * Fork: the Pro add-ons whose whole code is in this repository, on for everyone without a pack.
+ * Left out: "frames" (its living part is module code the shop delivers, not in this repository) and the
+ * unreleased add-ons (not finished yet). The fun packs stay as they are (free from the shop).
+ */
+export const BUILT_IN_UNLOCKED: readonly Feature[] = [
+  ...FEATURES.filter((f) => !MODULE_FEATURES.includes(f) && !UNRELEASED.includes(f)),
+  ...HIDDEN,
+];
+
 export function unlockedFeatures(packs: readonly { features?: string[] }[] = getPacks()): Set<Feature> {
-  const out = new Set<Feature>();
+  const out = new Set<Feature>(BUILT_IN_UNLOCKED);
   for (const p of packs) for (const f of p.features ?? []) if (knownFeature(f)) out.add(f as Feature);
   return out;
 }

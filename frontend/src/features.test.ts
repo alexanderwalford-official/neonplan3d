@@ -1,20 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { hasFeature, manualUrl, shopUrl, unlockedFeatures } from "./features.ts";
+import { BUILT_IN_UNLOCKED, hasFeature, manualUrl, shopUrl, unlockedFeatures } from "./features.ts";
 
-test("features come from installed packs that list them; unknown names are ignored", () => {
-  assert.deepEqual([...unlockedFeatures([])], []);
-  const packs = [{ features: ["weather", "teleport"] }, { features: undefined }, { features: ["camera_cockpit"] }];
-  assert.deepEqual([...unlockedFeatures(packs)].sort(), ["camera_cockpit", "weather"]);
-  assert.equal(hasFeature("screens", [{ features: ["screens"] }]), true);
-  assert.equal(hasFeature("screens", [{ features: ["screens"] }]), true);
-  assert.equal(hasFeature("weather", [{ features: ["weather"] }]), true);
-  assert.equal(hasFeature("camera_cockpit", [{ features: ["weather"] }]), false);
+test("fork: built-in Pro features are on without a pack; module and unreleased ones still need one", () => {
+  assert.deepEqual([...unlockedFeatures([])].sort(), [...BUILT_IN_UNLOCKED].sort());
+  for (const f of ["camera_cockpit", "weather", "screens", "energy_pro", "sound", "auto_pro", "time_travel", "household", "fridge_smart"] as const)
+    assert.equal(hasFeature(f, []), true, f);
+  assert.equal(hasFeature("frames", []), false);
+  assert.equal(hasFeature("pool", []), false);
+  assert.equal(hasFeature("frames", [{ features: ["frames", "teleport"] }]), true);
+  assert.equal(hasFeature("fun_pets", []), false);
 });
 
 test("time travel is a Pro add-on of its own with its section in the manual", () => {
-  assert.equal(hasFeature("time_travel", [{ features: ["time_travel"] }]), true);
-  assert.equal(hasFeature("time_travel", [{ features: ["energy_pro"] }]), false);
+  assert.equal(hasFeature("time_travel", []), true);
   assert.equal(manualUrl("de", "time_travel"), "https://mastershort.de/neonplan3d/anleitung/pro-erweiterungen/?lang=de#67-zeitreise");
   assert.equal(manualUrl("en", "time_travel"), "https://mastershort.de/en/neonplan3d/manual/pro-add-ons/?lang=en#67-time-travel");
 });
