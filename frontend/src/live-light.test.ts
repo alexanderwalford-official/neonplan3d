@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_LIGHT, liveLight, sunDirection, topBrightness } from "./live-light.ts";
+import { DEFAULT_LIGHT, glassTint, liveLight, sunDirection, topBrightness } from "./live-light.ts";
 import { STYLES } from "./looks.ts";
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
@@ -32,7 +32,8 @@ test("fork: noon is bright and white, sunset warm, night dark", () => {
   const sunset = liveLight({ elevation: 3, azimuth: 280 }, 0, null);
   const night = liveLight({ elevation: -25, azimuth: 0 }, 0, null);
   assert.ok(topBrightness(noon) > 0.95 && topBrightness(noon) < 1.25, `noon ${topBrightness(noon)}`);
-  assert.ok(topBrightness(night) < 0.25, `night ${topBrightness(night)}`);
+  // linear light: 0.1 already shows as about a third of full brightness on screen
+  assert.ok(topBrightness(night) < 0.1, `night ${topBrightness(night)}`);
   assert.ok(topBrightness(sunset) < topBrightness(noon));
   // warm: red well above blue in the low sun's light
   assert.ok(sunset.direct[0] > sunset.direct[2] * 1.6);
@@ -53,6 +54,13 @@ test("fork: clouds take the direct sun and leave an even, grey light; rain makes
   assert.ok(topBrightness(rainy) < topBrightness(overcast));
   // grey: the sky light's channels lie close together
   assert.ok(Math.max(...overcast.sky) - Math.min(...overcast.sky) < 0.06);
+});
+
+test("fork: the see-through walls stay white in the sun and go dark at night", () => {
+  const noon = glassTint(liveLight({ elevation: 50, azimuth: 180 }, 0, null));
+  const night = glassTint(liveLight({ elevation: -25, azimuth: 0 }, 0, null));
+  assert.ok(noon.every((v) => v > 0.95 && v <= 1), `noon ${noon}`);
+  assert.ok(night.every((v) => v < 0.15), `night ${night}`);
 });
 
 test("fork: without a known sun the light is a plain bright day", () => {

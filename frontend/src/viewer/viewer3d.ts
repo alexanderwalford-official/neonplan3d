@@ -44,7 +44,7 @@ import { buildSolarLive, solarLiveMaterial, writeSolarLevels, type SolarLive } f
 import { dotTexture, roofLightPoints, roofSnowGeometry } from "./snow.ts";
 import { Firework } from "./firework.ts";
 import { buildPools, disposePools, type PoolPiece } from "./pool-water.ts";
-import { liveLight } from "../live-light.ts";
+import { glassTint, liveLight } from "../live-light.ts";
 import { accentOnUniform, accentUniform, applyLiveLight, applyStyleUniforms, floorLevelUniform, LIT_ATTRIBUTE, makeMorphMask, makeStyleUniforms, MORPH_ATTRIBUTE, MORPH_MASK_GLSL, MORPH_POLY_MAX, morphMaskUniforms, parseAccent, lineBlending, setMorphDefine, STYLE_LOOK, themed, themeIndex, type Theme, type ThemeUniform } from "./theme.ts";
 import { styleById, type StyleDef } from "../looks.ts";
 import { hexColor, setNaturalPalette } from "./palette.ts";
@@ -1863,10 +1863,18 @@ export class FloorplanViewer {
    * is rebuilt, so it can follow every change of sun.sun and the weather entity.
    */
   private applyLive(): void {
-    if (!this.style?.live) return;
-    const w = this.weather;
-    applyLiveLight(liveLight(this.sun, this.building?.settings.north ?? 0, w ? { cloud: w.cloud, rain: w.rain, snow: w.snow, fog: w.fog } : null), this.themeUniform.style);
+    if (this.style?.live) {
+      const w = this.weather;
+      const light = liveLight(this.sun, this.building?.settings.north ?? 0, w ? { cloud: w.cloud, rain: w.rain, snow: w.snow, fog: w.fog } : null);
+      applyLiveLight(light, this.themeUniform.style);
+      this.liveTint.setRGB(...glassTint(light));
+    } else this.liveTint.setRGB(1, 1, 1);
+    // the see-through walls are drawn without the style shader: they take the light as their material colour
+    for (const fv of this.floors) fv.materials.glassWall.color.copy(this.liveTint);
   }
+
+  /** Fork: the see-through walls' colour under the live light (white in every other style). */
+  private readonly liveTint = new Color(1, 1, 1);
 
   /** Position of the sun; sunlight falls through windows facing it. */
   setSun(sun: SunState | null): void {
@@ -3117,7 +3125,7 @@ export class FloorplanViewer {
       // the walls sit a hair behind their glowing edges in depth: lines lying on a wall's top or face no longer
       // flicker in and out at corners and joints as the view turns (#417)
       wall: themed(makeFoldable(new MeshBasicMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), mask, "solid"), this.themeUniform),
-      glassWall: makeFoldable(new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }), mask, "glass"),
+      glassWall: makeFoldable(new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, color: this.liveTint.clone() }), mask, "glass"),
       // result = floor colour * vertex colour (white leaves the floor untouched)
       shadow: new MeshBasicMaterial({
         vertexColors: true,

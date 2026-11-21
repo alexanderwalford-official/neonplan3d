@@ -47,9 +47,11 @@ const add = (a: Rgb, b: Rgb): Rgb => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const SUN_HIGH: Rgb = [1, 0.97, 0.92];
 const SUN_GOLD: Rgb = [1, 0.84, 0.62];
 const SUN_LOW: Rgb = [1, 0.58, 0.32];
+// these are linear light: the screen shows them brighter (sRGB), 0.07 looks like about 30 % grey – so a white wall at
+// night reads as a dim grey-blue, not as lit (0.2 here looked like half-lit walls under a night sky)
 const SKY_DAY: Rgb = [0.62, 0.65, 0.7];
-const SKY_DUSK: Rgb = [0.42, 0.36, 0.44];
-const SKY_NIGHT: Rgb = [0.17, 0.19, 0.29];
+const SKY_DUSK: Rgb = [0.3, 0.25, 0.31];
+const SKY_NIGHT: Rgb = [0.055, 0.065, 0.105];
 const OVERCAST: Rgb = [0.8, 0.81, 0.83];
 /** Strength of the direct sunlight at its highest. */
 const DIRECT = 0.55;
@@ -101,6 +103,14 @@ export function liveLight(sun: LiveSun | null, northDeg: number, weather: LiveWe
     sky = scale(sky, 1 - 0.18 * wet - 0.1 * fog);
   }
   return { dir: sunDirection(sun, northDeg), direct, sky };
+}
+
+/**
+ * The colour the see-through walls are multiplied with (they are drawn without the style shader): about what a wall
+ * gets from the light, scaled so a sunny day keeps them white; each channel 0–1.
+ */
+export function glassTint(l: LiveLight): Rgb {
+  return [0, 1, 2].map((i) => Math.min(1, l.sky[i] * 1.2 + l.direct[i] * 0.6)) as Rgb;
 }
 
 /** How bright a top face turned to the sun is (for tests and the line colour): sky plus direct, as luminance. */
