@@ -178,11 +178,13 @@ function copyFonts() {
 // main 709.8 KB on 2026-11-15 (was 870.0): the 1130 texts only the editor needs moved to i18n-editor.ts in the editor bundle; card editor 179 KB
 // 3D 926 KB on 2026-11-18: walls facing their own way (#1189), the sky's horizon beyond the map's far edge (#1203)
 // editor 1160 KB on 2026-11-19: the card form asks what a card is for (tablet / phone) and holds the phone bar's options and own places
-// fork: 3D 928 KB on 2026-11-21: the generic prop and the temperature and humidity sensor (custom-items.ts)
-// fork: 3D 932 KB on 2026-11-21: the realistic style's live light from the real sun and weather (live-light.ts)
-const BUDGET = { "neonplan3d.js": 870 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-locate.js": 160 * 1024, "neonplan3d-osm.js": 20 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 932 * 1024, "neonplan3d-editor.js": 1160 * 1024, "neonplan3d-card-editor.js": 340 * 1024 };
+const BUDGET = { "neonplan3d.js": 870 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-locate.js": 160 * 1024, "neonplan3d-osm.js": 20 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 926 * 1024, "neonplan3d-editor.js": 1160 * 1024, "neonplan3d-card-editor.js": 340 * 1024 };
 
 copyFonts();
+// fork: room for the fork's own 3D code on top of upstream's budget – the prop and climate sensor (custom-items.ts,
+// ~1 KB) and the realistic style's live light (live-light.ts, ~2.5 KB). Kept apart from upstream's BUDGET line above,
+// which upstream changes in many releases, so merging an update does not conflict here.
+BUDGET["neonplan3d-3d.js"] += 6 * 1024;
 if (watch) {
   // in watch mode the hash is not tracked; a dev reload fetches the bundle anyway
   for (const c of [viewerConfig, editorConfig("dev", "dev", "dev", "dev"), cardEditorConfig, timeTravelConfig, funConfig, voiceConfig, locateConfig, osmConfig, mainConfig("dev", "dev", "dev", "dev", "dev", "dev", "dev")]) await (await context(c)).watch();
