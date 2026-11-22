@@ -959,7 +959,8 @@ function bathtub(b: Builder, w: number, d: number, h: number): void {
   b.box(-w / 2, w / 2, h - 0.02, h, d / 2 - rim, d / 2, C.whiteTop);
   b.box(-w / 2, -w / 2 + rim, h - 0.02, h, -d / 2 + rim, d / 2 - rim, C.whiteTop);
   b.box(w / 2 - rim, w / 2, h - 0.02, h, -d / 2 + rim, d / 2 - rim, C.whiteTop);
-  b.box(-w / 2 + rim, w / 2 - rim, h - 0.03, h - 0.02, -d / 2 + rim, d / 2 - rim, C.glass, C.glass, EDGE_GLOW);
+  // fork: the water's top lies 5 mm above the tub's body (it lay in the same plane and flickered against it)
+  b.box(-w / 2 + rim, w / 2 - rim, h - 0.02, h - 0.015, -d / 2 + rim, d / 2 - rim, C.glass, C.glass, EDGE_GLOW);
   b.cyl(-w / 2 + 0.04, 0, 0.02, h, h + 0.12, C.metal, C.metal, 8);
 }
 
@@ -990,10 +991,12 @@ function wc(b: Builder, w: number, d: number, h: number): void {
 function washbasin(b: Builder, w: number, d: number, h: number): void {
   cabinet(b, w, d - 0.02, h - 0.12, w > 0.8 ? 2 : 1, h - 0.3);
   b.box(-w / 2, w / 2, h - 0.12, h, -d / 2, d / 2, C.white, C.whiteTop, EDGE_FURN);
-  b.box(-w / 2 + 0.07, w / 2 - 0.07, h - 0.005, h, -d / 2 + 0.12, d / 2 - 0.06, C.glass, C.glass, EDGE_GLOW);
+  // fork: the basin's water 3 mm above the counter, the mirror 3 mm off the wall – both lay in the same plane as the
+  // surface behind them and flickered against it while the camera moved
+  b.box(-w / 2 + 0.07, w / 2 - 0.07, h - 0.005, h + 0.003, -d / 2 + 0.12, d / 2 - 0.06, C.glass, C.glass, EDGE_GLOW);
   b.cyl(0, -d / 2 + 0.06, 0.018, h, h + 0.2, C.metal, C.metal, 8);
   // mirror above
-  b.box(-w / 2 + 0.04, w / 2 - 0.04, h + 0.35, h + 1.0, -d / 2, -d / 2 + 0.02, C.glass, C.glass, EDGE_GLOW);
+  b.box(-w / 2 + 0.04, w / 2 - 0.04, h + 0.35, h + 1.0, -d / 2 + 0.003, -d / 2 + 0.02, C.glass, C.glass, EDGE_GLOW);
 }
 
 function tvBoard(b: Builder, w: number, d: number, h: number): void {

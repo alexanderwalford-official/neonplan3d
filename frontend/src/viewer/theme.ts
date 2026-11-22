@@ -5,6 +5,7 @@
 import { AdditiveBlending, NormalBlending, Vector2, Vector3, type Material } from "three";
 import { THEMES, type Theme } from "../themes.ts";
 import type { StyleDef } from "../looks.ts";
+import { makeShadowUniforms } from "./live-shadows.ts";
 
 export type { Theme } from "../themes.ts";
 
@@ -125,6 +126,8 @@ export function makeStyleUniforms() {
     uLiveDir: { value: new Vector3(-0.45, 0.8, 0.4).normalize() },
     uLiveDirect: { value: new Vector3(0.45, 0.44, 0.41) },
     uLiveSky: { value: new Vector3(0.62, 0.65, 0.7) },
+    // fork: the live style's sun and cover maps (live-shadows.ts)
+    ...makeShadowUniforms(),
   };
 }
 
@@ -201,6 +204,12 @@ uniform float uStLive;
 uniform vec3 uLiveDir;
 uniform vec3 uLiveDirect;
 uniform vec3 uLiveSky;
+uniform float uShadowOn;
+uniform sampler2D uShadowMap;
+uniform mat4 uShadowMatrix;
+uniform float uShadowTexel;
+uniform sampler2D uCoverMap;
+uniform mat4 uCoverMatrix;
 uniform float uFloorY;
 varying vec3 vFp3dWorld;
 #ifdef FP3D_LIT
@@ -247,6 +256,70 @@ float fp3dStyleFloor(vec3 c, vec3 n) {
   }
   return mix(1.0, k, fade);
 }
+// fork, live style (live-shadows.ts): the sun map – 1 lit, 0 in shadow, a soft edge from 16 samples
+float fp3dSunShadow(vec3 n) {
+  vec3 w = vFp3dWorld + n * uShadowTexel * 3.0;
+  vec4 s = uShadowMatrix * vec4(w, 1.0);
+  if (s.x <= 0.0 || s.x >= 1.0 || s.y <= 0.0 || s.y >= 1.0 || s.z >= 1.0) return 1.0;
+  float lit = 0.0;
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      vec2 o = (vec2(float(i), float(j)) - 1.5) * (1.5 / 4096.0);
+      lit += s.z - 0.0004 <= texture2D(uShadowMap, s.xy + o).r ? 1.0 : 0.0;
+    }
+  }
+  return lit / 16.0;
+}
+// fork, live style: the cover map – how much of a point lies under a roof or a ceiling (0 open sky … 1 covered); the
+// point is moved a little off its face first, so a wall's outside is not covered by the wall itself
+float fp3dCovered(vec3 n) {
+  vec3 w = vFp3dWorld + vec3(n.x, 0.0, n.z) * 0.12 + vec3(0.0, 0.06, 0.0);
+  vec4 s = uCoverMatrix * vec4(w, 1.0);
+  if (s.x <= 0.0 || s.x >= 1.0 || s.y <= 0.0 || s.y >= 1.0) return 0.0;
+  float c = 0.0;
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) c += texture2D(uCoverMap, s.xy + vec2(float(i), float(j)) * (3.0 / 2048.0)).r < s.z - 0.0004 ? 1.0 : 0.0;
+  }
+  return c / 9.0;
+}
+float fp3dNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(fp3dHash(i), fp3dHash(i + vec2(1.0, 0.0)), f.x), mix(fp3dHash(i + vec2(0.0, 1.0)), fp3dHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+// fork, live style: surface detail from the position alone – a lawn in patches, courses of tiles on pitched roofs, a
+// fine plaster grain on light walls; the fine parts fade out where a pixel covers more than a few centimetres
+vec3 fp3dLiveDetail(vec3 c, vec3 n) {
+  vec3 w = vFp3dWorld;
+  float mx = max(c.r, max(c.g, c.b));
+  float sat = mx > 0.0 ? (mx - min(c.r, min(c.g, c.b))) / mx : 0.0;
+  float near = 1.0 - smoothstep(0.02, 0.12, fwidth(w.x) + fwidth(w.y) + fwidth(w.z));
+  if (n.y > 0.9 && c.g > c.r * 1.15 && c.g > c.b * 1.15) {
+    float big = fp3dNoise(w.xz * 0.35) * 0.6 + fp3dNoise(w.xz * 1.4) * 0.4;
+    float fine = fp3dNoise(w.xz * 22.0) * 0.6 + fp3dNoise(w.xz * 61.0) * 0.4;
+    float k = 0.84 + 0.26 * big + near * 0.16 * (fine - 0.5);
+    // drier and lusher patches: a little more yellow, a little more blue-green
+    return vec3(k * (1.0 + 0.1 * (big - 0.5)), k, k * (1.0 - 0.12 * (big - 0.5)));
+  }
+  if (n.y > 0.2 && n.y < 0.97 && !(c.b > c.r * 1.3)) {
+    vec2 t = normalize(vec2(-n.z, n.x));
+    float rowH = 0.3 * sqrt(max(0.02, 1.0 - n.y * n.y));
+    float row = floor(w.y / rowH);
+    float fy = fract(w.y / rowH);
+    float along = dot(w.xz, t) / 0.26 + row * 0.5;
+    float fx = fract(along);
+    float seam = smoothstep(0.0, 0.07, fy) * smoothstep(0.0, 0.05, min(fx, 1.0 - fx));
+    float tile = 0.9 + 0.18 * fp3dHash(vec2(floor(along), row));
+    return vec3(mix(1.0, tile * mix(0.62, 1.0, seam) * (0.86 + 0.14 * fy), near));
+  }
+  if (abs(n.y) < 0.15 && mx > 0.45 && sat < 0.3) {
+    vec2 q = vec2(dot(w.xz, normalize(vec2(-n.z, n.x))), w.y);
+    float g = fp3dNoise(q * 45.0) * 0.6 + fp3dNoise(q * 11.0) * 0.4;
+    return vec3(1.0 + near * 0.07 * (g - 0.5) - 0.035 * fp3dNoise(q * 0.8));
+  }
+  return vec3(1.0);
+}
 vec3 fp3dThemedAs(vec3 c, bool line, bool accent, int look) {
   float mx = max(c.r, max(c.g, c.b));
   float mn = min(c.r, min(c.g, c.b));
@@ -268,7 +341,15 @@ vec3 fp3dThemedAs(vec3 c, bool line, bool accent, int look) {
       cc *= fp3dStyleLight(n) * fp3dStyleFloor(cc, n);
       // fork, live light: the sky lights every face (tops a little more), the real sun those turned towards it;
       // lit lamps (above) and signal colours (screens, open windows) keep their own glow
-      if (uStLive > 0.5 && !signal) cc *= uLiveSky * (0.82 + 0.18 * max(n.y, 0.0)) + uLiveDirect * max(dot(n, uLiveDir), 0.0);
+      // with the sun and cover maps (live-shadows.ts): shadows cast by walls, roof and furniture, and less sky light
+      // under a roof or a ceiling – a room is lit by its windows
+      if (uStLive > 0.5 && !signal) {
+        cc *= fp3dLiveDetail(cc, n);
+        float sun = max(dot(n, uLiveDir), 0.0);
+        float lit = uShadowOn > 0.5 && sun > 0.0 ? fp3dSunShadow(n) : 1.0;
+        float cover = uShadowOn > 0.5 ? fp3dCovered(n) : 0.0;
+        cc *= uLiveSky * (0.82 + 0.18 * max(n.y, 0.0)) * (1.0 - 0.42 * cover) + uLiveDirect * sun * lit;
+      }
       // evening: the house dims warm, lit lamps and screens keep their glow
       if (uStDim > 0.0 && !signal) cc *= mix(vec3(1.0), vec3(0.62, 0.52, 0.42), uStDim) * (1.0 - 0.75 * uStDim);
       return cc;
@@ -338,7 +419,11 @@ export function themed<T extends Material>(material: T, uniform: ThemeUniform, l
   #endif`;
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>\n${GLSL}\n#ifdef FP3D_MORPH\nvarying vec3 vFp3dColor2;\n${MORPH_MASK_GLSL}\n#endif`)
-      .replace("#include <color_fragment>", `vec3 fp3dBase = diffuseColor.rgb;\n#include <color_fragment>\n${morph}`);
+      .replace(
+        "#include <color_fragment>",
+        // fork: in the live style the drawn edges are only a hint – real surfaces have no outlines
+        `vec3 fp3dBase = diffuseColor.rgb;\n#include <color_fragment>\n${morph}${line ? "\n  if (uStLive > 0.5) diffuseColor.a *= 0.22;" : ""}`,
+      );
   };
   material.userData.fp3dThemed = true;
   material.customProgramCacheKey = () => `${key()}-themed-${line ? "l" : "s"}${accent ? "" : "-na"}`;

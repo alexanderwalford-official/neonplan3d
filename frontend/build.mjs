@@ -182,9 +182,10 @@ const BUDGET = { "neonplan3d.js": 870 * 1024, "neonplan3d-fun.js": 40 * 1024, "n
 
 copyFonts();
 // fork: room for the fork's own 3D code on top of upstream's budget – the prop and climate sensor (custom-items.ts,
-// ~1 KB) and the realistic style's live light (live-light.ts, ~2.5 KB). Kept apart from upstream's BUDGET line above,
-// which upstream changes in many releases, so merging an update does not conflict here.
-BUDGET["neonplan3d-3d.js"] += 6 * 1024;
+// ~1 KB), the realistic style's live light (live-light.ts, ~2.5 KB) and its sun shadows, surface detail and haze
+// (live-shadows.ts and theme.ts, ~8 KB). Kept apart from upstream's BUDGET line above, which upstream changes in many
+// releases, so merging an update does not conflict here.
+BUDGET["neonplan3d-3d.js"] += 16 * 1024;
 if (watch) {
   // in watch mode the hash is not tracked; a dev reload fetches the bundle anyway
   for (const c of [viewerConfig, editorConfig("dev", "dev", "dev", "dev"), cardEditorConfig, timeTravelConfig, funConfig, voiceConfig, locateConfig, osmConfig, mainConfig("dev", "dev", "dev", "dev", "dev", "dev", "dev")]) await (await context(c)).watch();

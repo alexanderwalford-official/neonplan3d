@@ -6,7 +6,7 @@
 // animated independently.
 
 import type { HassEntity } from "../types.ts";
-import { AdditiveBlending, CustomBlending, DstColorFactor, OneMinusDstColorFactor, NormalBlending, OneFactor, OneMinusSrcAlphaFactor, RingGeometry, Fog, CircleGeometry, Box3, CanvasTexture, ClampToEdgeWrapping, Color, BackSide, DoubleSide, FrontSide, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, MultiplyBlending, OrthographicCamera, PerspectiveCamera, Points, PointsMaterial, PlaneGeometry, Raycaster, RepeatWrapping, Scene, SRGBColorSpace, TextureLoader, type Texture, Float32BufferAttribute, Uint32BufferAttribute, DynamicDrawUsage, BufferGeometry as Geometry, Vector2, Vector3, WebGLRenderer, WebGLRenderTarget, type Material, BufferGeometry } from "three";
+import { AdditiveBlending, CustomBlending, DstColorFactor, OneMinusDstColorFactor, NormalBlending, OneFactor, OneMinusSrcAlphaFactor, RingGeometry, Fog, CircleGeometry, Box3, CanvasTexture, ClampToEdgeWrapping, Color, BackSide, DoubleSide, FrontSide, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, MultiplyBlending, OrthographicCamera, PerspectiveCamera, Points, PointsMaterial, PlaneGeometry, Raycaster, RepeatWrapping, Scene, SRGBColorSpace, TextureLoader, type Texture, Float32BufferAttribute, Uint32BufferAttribute, DynamicDrawUsage, BufferGeometry as Geometry, Vector2, Vector3, WebGLRenderer, WebGLRenderTarget, type Material, type Object3D, BufferGeometry } from "three";
 import type { Building, Floor, Furniture, Room, StartView, Vec2 } from "../model.ts";
 import { markLit, recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
 import { centroid, GANG_TYPES, labelPoint, gateSpans, outdoorSurface, outdoorTopAt, outdoorZones, pointInPolygon, openingStyle, setTerrain, WALL_LAMP_Y, zonesOf } from "../model.ts";
@@ -45,6 +45,7 @@ import { dotTexture, roofLightPoints, roofSnowGeometry } from "./snow.ts";
 import { Firework } from "./firework.ts";
 import { buildPools, disposePools, type PoolPiece } from "./pool-water.ts";
 import { glassTint, liveLight } from "../live-light.ts";
+import { castShadow, LiveShadows, makeCeilings } from "./live-shadows.ts";
 import { accentOnUniform, accentUniform, applyLiveLight, applyStyleUniforms, floorLevelUniform, LIT_ATTRIBUTE, makeMorphMask, makeStyleUniforms, MORPH_ATTRIBUTE, MORPH_MASK_GLSL, MORPH_POLY_MAX, morphMaskUniforms, parseAccent, lineBlending, setMorphDefine, STYLE_LOOK, themed, themeIndex, type Theme, type ThemeUniform } from "./theme.ts";
 import { styleById, type StyleDef } from "../looks.ts";
 import { hexColor, setNaturalPalette } from "./palette.ts";
@@ -1773,6 +1774,8 @@ export class FloorplanViewer {
     this.themeUniform.value = plain ? themeIndex(style.base) : STYLE_LOOK;
     applyStyleUniforms(style, this.themeUniform.style);
     this.applyLive();
+    // fork: leaving the live style brings back the sun's patches through the windows (it hid them for its shadow map)
+    if (!style.live) for (const fv of this.floors) this.buildSun(fv);
     // a zoom style keeps the style numbers for its near look; a style of its own as the far look ends it
     const zoomUsable = this.zoomWanted && !style.palette && !style.natural ? this.zoomWanted : null;
     if (JSON.stringify(zoomUsable) !== JSON.stringify(this.zoomStyle)) {
@@ -1875,6 +1878,67 @@ export class FloorplanViewer {
 
   /** Fork: the see-through walls' colour under the live light (white in every other style). */
   private readonly liveTint = new Color(1, 1, 1);
+
+  /** Fork: the live style's sun and cover maps (live-shadows.ts), made on first use. */
+  private liveShadows: LiveShadows | null = null;
+
+  /** Fork: draws the sun and cover maps right before a frame while the live style shows. */
+  private renderLiveShadows(): void {
+    const u = this.themeUniform.style!;
+    if (!this.style?.live || this.options.safeFx) {
+      this.liveShadows?.off();
+      return;
+    }
+    this.liveShadows ??= new LiveShadows(u);
+    // the roof still shades the floors it covers while it is faded or lifted out of the way for the view: for the
+    // shadow maps it sits where it belongs over every shown floor (an attic is lit through its windows, not from aside)
+    const roof = this.roof;
+    const restore: [Object3D, boolean, number][] = [];
+    if (roof) {
+      const lift = this.roofLift();
+      restore.push([roof.group, roof.group.visible, roof.group.position.y]);
+      roof.group.visible = true;
+      for (const part of roof.parts) {
+        restore.push([part.group, part.group.visible, part.group.position.y]);
+        const ride = this.floorMap.get(part.rideId) ?? this.floorMap.get(part.floorId);
+        part.group.visible = !!ride?.group.visible;
+        part.group.position.y -= lift;
+      }
+    }
+    this.liveShadows.render(this.renderer, this.scene, u.uLiveDir.value, this.weatherBox);
+    for (const [o, visible, y] of restore) {
+      o.visible = visible;
+      o.position.y = y;
+    }
+    // the warm patches of sunlight through the windows come from the shadow map now
+    for (const fv of this.floors) fv.sunMesh.visible = false;
+  }
+
+  /** Fork: haze over the distance in the live style – the neighbourhood fades into the colour of the sky. */
+  private readonly haze = new Fog(0xffffff, 100, 400);
+
+  private placeHaze(): void {
+    const live = !!this.style?.live && !this.options.safeFx;
+    if (!live) {
+      if (this.scene.fog === this.haze) this.scene.fog = null;
+      return;
+    }
+    // a foggy day keeps the weather's own fog
+    if (this.scene.fog && this.scene.fog !== this.haze) return;
+    this.scene.fog = this.haze;
+    const u = this.themeUniform.style!;
+    const sky = u.uLiveSky.value;
+    const direct = u.uLiveDirect.value;
+    this.haze.color.setRGB(Math.min(1, sky.x * 1.25 + direct.x * 0.35), Math.min(1, sky.y * 1.25 + direct.y * 0.35), Math.min(1, sky.z * 1.25 + direct.z * 0.35));
+    const b = this.weatherBox;
+    const half = Math.hypot((b.x1 - b.x0) / 2, (b.z1 - b.z0) / 2, (b.y1 - b.y0) / 2);
+    const dist = this.camera.position.distanceTo(new Vector3((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2));
+    // the house stays clear; beyond it the air thickens, more under clouds and in rain
+    const w = this.weather;
+    const murk = Math.min(1, (w?.cloud ?? 0) * 0.4 + Math.max(w?.rain ?? 0, w?.snow ?? 0) * 0.6);
+    this.haze.near = dist + half;
+    this.haze.far = this.haze.near + 220 * (1 - 0.6 * murk) + 40;
+  }
 
   /** Position of the sun; sunlight falls through windows facing it. */
   setSun(sun: SunState | null): void {
@@ -2645,6 +2709,7 @@ export class FloorplanViewer {
   dispose(): void {
     this.sky.dispose();
     this.projections.dispose();
+    this.liveShadows?.dispose();
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     clearTimeout(this.flowTimer);
@@ -3344,6 +3409,11 @@ export class FloorplanViewer {
         ...(solarMesh ? [solarMesh] : []),
         ...earthParts,
       );
+      // fork: what casts the live style's sun shadows (live-shadows.ts) – walls and furniture, floors, frames, blinds,
+      // fridge doors – and the ceilings over the rooms, which only the shadow maps see
+      for (const m of [wallMesh, floorMesh, framesMesh, blindsMesh, fridgeMesh]) castShadow(m);
+      const ceilings = makeCeilings(floor);
+      if (ceilings) group.add(ceilings);
       this.root.add(group);
 
       const label = document.createElement("button");
@@ -3601,6 +3671,8 @@ export class FloorplanViewer {
     group.renderOrder = 8;
     this.scene.add(group);
     this.scene.add(wins);
+    // fork: the roof body and the roof windows' frames cast the live style's sun shadows
+    for (const g of [group, wins]) g.traverse((o) => { if ((o as Mesh).isMesh && ((o as Mesh).material === solid || (o as Mesh).material === winSolid)) castShadow(o); });
     this.roof = { group, parts, below, solid, lines, glass, live, lives, wins, winSolid, winLines, winGlass, roofWinGlass };
     this.placeRoof();
   }
@@ -6188,6 +6260,8 @@ export class FloorplanViewer {
       this.firework.step((now - this.fireworkAt) / 1000);
       this.fireworkAt = now;
     }
+    this.renderLiveShadows();
+    this.placeHaze();
     this.renderer.render(this.scene, this.camera);
     this.disposeRetired();
     // labels are placed only when the view or something on it moved (style writes cost layout)
