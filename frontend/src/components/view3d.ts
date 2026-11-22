@@ -965,6 +965,7 @@ export class Fp3dView3d extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.watchWinter(false);
+    this.watchMotion(false);
     document.removeEventListener("visibilitychange", this.onVisible);
     this.stopWalk();
     this.pets?.dispose();
@@ -1275,6 +1276,17 @@ export class Fp3dView3d extends LitElement {
     }
     if (changed.has("showStats")) v.setStats(this.showStats || diagnosticsActive());
     if (changed.has("building")) this.findIndex = null;
+  }
+
+  /** Fork (motion-figures.ts): while a "Someone" figure shows, a look every 30 s lets it go once its hold time is over. */
+  private motionTimer: ReturnType<typeof setInterval> | undefined;
+
+  private watchMotion(on: boolean): void {
+    if (on && !this.motionTimer) this.motionTimer = setInterval(() => this.syncDevices(false, true), 30_000);
+    else if (!on && this.motionTimer) {
+      clearInterval(this.motionTimer);
+      this.motionTimer = undefined;
+    }
   }
 
   /** Winter: what comes with the time of day and the year is looked at once a minute while the pack is there. */
@@ -1805,6 +1817,7 @@ export class Fp3dView3d extends LitElement {
     const named = released("locate") && personsShown(b) ? [...roomSensors, ...locatedPersons(hass, b, new Set(roomSensors.map((p) => p.id)))] : roomSensors;
     // fork (motion-figures.ts): an unnamed figure in rooms whose motion sensor is on and where no named person stands
     const someone = personsShown(b) ? motionFigures(hass, b, new Set(named.map((p) => p.roomId)), translate(hass, "someone")) : [];
+    this.watchMotion(someone.length > 0);
     const persons = [...named, ...someone];
     v.setPersonLook(personLook(b) === "pin" ? "pin" : "figure");
     v.setPersons([...persons, ...this.moduleFigures(b)]);

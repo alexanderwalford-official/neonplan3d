@@ -26,7 +26,7 @@ import { weatherEntity, isRainSource } from "../weather.ts";
 import { isOutageSource } from "../outage.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { hasFeature, labOn, manualUrl, registerUrl, released, shopUrl, UNRELEASED } from "../features.ts";
-import { motionFiguresOn } from "../motion-figures.ts";
+import { motionFiguresOn, motionSensorReport } from "../motion-figures.ts";
 import { CLIMATE_SENSOR, CUSTOM_TYPES, PROP_GLOW, PROP_SHAPES, propColor, propGlow, propShape, refOf } from "../custom-items.ts";
 import { fitText, type HintKey } from "../fit-hints.ts";
 import { FINISH_ROLES, FINISH_SWATCHES, finishHex, finishRolesOf, type FinishRole } from "../finishes.ts";
@@ -12754,7 +12754,23 @@ export class Fp3dEditor extends LitElement {
         ${this.t("motion_figures")}</label
       >
       <p class="fp3d-sub">${this.t("motion_figures_hint")}</p>
+      ${this.renderMotionReport()}
     </details>`;
+  }
+
+  /** Fork (motion-figures.ts): which motion sensors were found for which room – and which lie in an area no room has. */
+  private renderMotionReport() {
+    if (!this.hass || !motionFiguresOn(this._doc)) return nothing;
+    const { rooms, unlinked } = motionSensorReport(this.hass, this._doc);
+    const state = (id: string) => (this.hass?.states[id]?.state === "on" ? " ●" : "");
+    const names = (ids: string[]) => ids.map((id) => `${entityName(this.hass, id)}${state(id)}`).join(", ");
+    if (!rooms.length && !unlinked.length) return html`<p class="fp3d-sub">${this.t("motion_none")}</p>`;
+    return html`${rooms.length
+      ? html`<p class="fp3d-sub"><b>${this.t("motion_found")}</b><br />${rooms.map((r) => html`${r.room}: ${names(r.sensors)}<br />`)}</p>`
+      : nothing}
+    ${unlinked.length
+      ? html`<p class="fp3d-sub"><b>${this.t("motion_unlinked")}</b><br />${unlinked.map((u) => html`${u.area}: ${names(u.sensors)}<br />`)}</p>`
+      : nothing}`;
   }
 
   /** "State from": an entity lights the item's top (two light its halves) – any furniture, a bed with occupancy mats too (#116). */

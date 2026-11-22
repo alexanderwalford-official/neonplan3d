@@ -12,6 +12,7 @@ import type { HomeAssistant } from "./types.ts";
 import { weatherEntity } from "./weather.ts";
 import { householdEntities } from "./household.ts";
 import { customEntities } from "./custom-items.ts";
+import { motionSensorsByArea } from "./motion-figures.ts";
 
 export interface WatchLinks {
   /** Entities of each door and window. */
@@ -51,8 +52,9 @@ export function watchedEntities(hass: HomeAssistant, b: Building, w: WatchLinks)
   // Haushalt Pro: the bins' calendars and sensors, the mailboxes' flaps and doors
   const household = hasFeature("household") ? [...b.floors.flatMap((f) => f.furniture.flatMap(householdEntities)), b.settings.household?.notes ?? null].filter((id): id is string => !!id && id !== "none") : [];
   const weather = weatherEntity(hass, w.weatherEntityId ?? b.settings.weather_entity);
-  // fork: the generic props' and climate sensors' entities (custom-items.ts)
-  const custom = b.floors.flatMap((f) => f.furniture.flatMap(customEntities));
+  // fork: the generic props' and climate sensors' entities (custom-items.ts), and the motion sensors behind the
+  // unnamed "Someone" figures (motion-figures.ts)
+  const custom = [...b.floors.flatMap((f) => f.furniture.flatMap(customEntities)), ...[...motionSensorsByArea(hass).values()].flat()];
   const all = [...placed, ...cameraSensors, ...links, ...power, ...furniture, ...states, ...doors, ...binds, ...robotRooms, ...roofWindowIds, ...solarIds, ...pictureRules, e.grid, e.solar, e.battery, e.battery_soc, e.consumption, e.tariff, ...presence, ...lights, ...heat, ...w.warnings, ...parking, ...motion, ...household, weather, "sun.sun"];
   return [...new Set([...all, ...custom].filter((id): id is string => !!id))];
 }
