@@ -3799,7 +3799,7 @@ ${this.planLine?`plan: ${this.plan}
       </section>
       ${this._tool==="measure"&&e?this.renderMeasureForm():this.freeWall?this.renderFreeWallForm(this.freeWall):this.outdoorArea?this.renderOutdoorForm(this.outdoorArea):this.opening?this.renderOpeningForm(this.opening):this.furnitureItem?this.renderFurnitureForm(this.furnitureItem):this.device?this.renderDeviceForm(this.device):n?f`${this.renderRoomForm(n,s)} ${this.renderDeviceList(n)}`:e?this.renderRoomList(e):b}
       ${this.renderHelpLinks()}
-      ${i&&!1?this.renderPresenceSettings():b}
+      ${i&&!0?this.renderPresenceSettings():b}
       ${e&&i?this.renderBackgroundForm(e):b}
     `}moveRoom(e,t){this.change((n,i)=>{let s=i.rooms.findIndex(l=>l.id===e),o=s+t;if(s<0||o<0||o>=i.rooms.length)return;let[a]=i.rooms.splice(s,1);i.rooms.splice(o,0,a)})}renderRoomList(e){return e.rooms.length?f`<section>
       <h3>${this.t("rooms")}</h3>
