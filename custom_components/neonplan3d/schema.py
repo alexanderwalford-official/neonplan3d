@@ -356,6 +356,8 @@ FURNITURE_SCHEMA = vol.Schema(
         vol.Optional("prop_no_glow"): bool,
         vol.Optional("temp_entity"): vol.Any(None, vol.All(str, vol.Length(max=255))),
         vol.Optional("humidity_entity"): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        # fork: a bathtub or washbasin without its water
+        vol.Optional("no_water"): bool,
         vol.Optional("bin_lid"): vol.Any(None, vol.Match(r"^#[0-9a-fA-F]{6}$")),
         vol.Optional("bin_source"): vol.Any(None, vol.All(str, vol.Length(max=255))),
         vol.Optional("bin_match"): vol.Any(None, vol.All(str, vol.Length(max=120))),

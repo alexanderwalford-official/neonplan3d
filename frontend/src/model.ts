@@ -342,6 +342,8 @@ export interface Furniture {
   /** Fork, temperature and humidity sensor: any entity telling the temperature, and one telling the humidity. */
   temp_entity?: EntityRef;
   humidity_entity?: EntityRef;
+  /** Fork: a bathtub or washbasin drawn without its water. */
+  no_water?: boolean;
   /** Mirrored (left-right) – an L-sofa the other way round, a cabinet with its door on the other side. */
   mirror?: boolean;
   /** LED strip: tilt about its length (°; 0 = lying flat, 90 = its face points sideways, e.g. along a roof slope). */

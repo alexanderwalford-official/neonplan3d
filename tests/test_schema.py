@@ -464,3 +464,12 @@ def test_fork_custom_items_keep_their_fields() -> None:
     for bad in ({"prop_shape": "sphere"}, {"prop_color": "orange"}, {"prop_glow": "#12345"}):
         with pytest.raises(vol.Invalid):
             FURNITURE_SCHEMA({**prop, **bad})
+
+
+def test_fork_bath_without_water() -> None:
+    """Fork: a bathtub or washbasin keeps its "no water" switch; anything but a boolean is refused."""
+    tub = {"id": "b1", "type": "bathtub", "x": 0, "z": 0, "rotation": 0, "w": 1.7, "d": 0.75, "h": 0.6, "variant": None}
+    assert FURNITURE_SCHEMA({**tub, "no_water": True})["no_water"] is True
+    assert "no_water" not in FURNITURE_SCHEMA(tub)
+    with pytest.raises(vol.Invalid):
+        FURNITURE_SCHEMA({**tub, "no_water": "yes"})

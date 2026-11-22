@@ -1165,6 +1165,7 @@ export const deEditor = {
   sensor_humidity: "Luftfeuchtigkeit (beliebige Entität)",
   sensor_hint:
     "Ein Sensor, ein Thermostat oder das Wetter: Der Wert oder sein Attribut (current_temperature, humidity) wird angezeigt. Ohne eigene Feuchte-Entität nimmt er die Feuchte der Temperatur-Entität, wenn sie eine hat.",
+  show_water: "Mit Wasser",
 };
 
 export type EditorKey = keyof typeof deEditor;
@@ -2330,6 +2331,7 @@ const enEditor: Record<EditorKey, string> = {
   sensor_humidity: "Humidity (any entity)",
   sensor_hint:
     "A sensor, a thermostat or the weather: its value or attribute (current_temperature, humidity) is shown. Without a humidity entity of its own it takes the temperature entity's humidity, when it has one.",
+  show_water: "With water",
 };
 
 addTexts(deEditor, enEditor);

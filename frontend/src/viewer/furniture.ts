@@ -952,15 +952,17 @@ function sink(b: Builder, w: number, d: number, h: number): void {
   b.box(-0.015, 0.015, h + 0.24, h + 0.28, -d / 2 + 0.05, -d / 2 + 0.22, C.metal);
 }
 
-function bathtub(b: Builder, w: number, d: number, h: number): void {
+function bathtub(b: Builder, w: number, d: number, h: number, water = true): void {
   const rim = 0.07;
   b.box(-w / 2, w / 2, 0, h - 0.02, -d / 2, d / 2, C.white, C.whiteTop, EDGE_FURN);
   b.box(-w / 2, w / 2, h - 0.02, h, -d / 2, -d / 2 + rim, C.whiteTop);
   b.box(-w / 2, w / 2, h - 0.02, h, d / 2 - rim, d / 2, C.whiteTop);
   b.box(-w / 2, -w / 2 + rim, h - 0.02, h, -d / 2 + rim, d / 2 - rim, C.whiteTop);
   b.box(w / 2 - rim, w / 2, h - 0.02, h, -d / 2 + rim, d / 2 - rim, C.whiteTop);
-  // fork: the water's top lies 5 mm above the tub's body (it lay in the same plane and flickered against it)
-  b.box(-w / 2 + rim, w / 2 - rim, h - 0.02, h - 0.015, -d / 2 + rim, d / 2 - rim, C.glass, C.glass, EDGE_GLOW);
+  // fork: the water's top lies 5 mm above the tub's body and 2 mm inside the rim (it lay in the same planes and
+  // flickered against them); a tub can also be shown without water (no_water)
+  const k = rim + 0.002;
+  if (water) b.box(-w / 2 + k, w / 2 - k, h - 0.02, h - 0.015, -d / 2 + k, d / 2 - k, C.glass, C.glass, EDGE_GLOW);
   b.cyl(-w / 2 + 0.04, 0, 0.02, h, h + 0.12, C.metal, C.metal, 8);
 }
 
@@ -988,12 +990,12 @@ function wc(b: Builder, w: number, d: number, h: number): void {
   b.box(-w / 2 + 0.02, w / 2 - 0.02, 0.41, 0.43, -d / 2 + tankD, -d / 2 + tankD + 0.05, C.whiteTop);
 }
 
-function washbasin(b: Builder, w: number, d: number, h: number): void {
+function washbasin(b: Builder, w: number, d: number, h: number, water = true): void {
   cabinet(b, w, d - 0.02, h - 0.12, w > 0.8 ? 2 : 1, h - 0.3);
   b.box(-w / 2, w / 2, h - 0.12, h, -d / 2, d / 2, C.white, C.whiteTop, EDGE_FURN);
   // fork: the basin's water 3 mm above the counter, the mirror 3 mm off the wall – both lay in the same plane as the
-  // surface behind them and flickered against it while the camera moved
-  b.box(-w / 2 + 0.07, w / 2 - 0.07, h - 0.005, h + 0.003, -d / 2 + 0.12, d / 2 - 0.06, C.glass, C.glass, EDGE_GLOW);
+  // surface behind them and flickered against it while the camera moved; the water can be left out (no_water)
+  if (water) b.box(-w / 2 + 0.07, w / 2 - 0.07, h - 0.005, h + 0.003, -d / 2 + 0.12, d / 2 - 0.06, C.glass, C.glass, EDGE_GLOW);
   b.cyl(0, -d / 2 + 0.06, 0.018, h, h + 0.2, C.metal, C.metal, 8);
   // mirror above
   b.box(-w / 2 + 0.04, w / 2 - 0.04, h + 0.35, h + 1.0, -d / 2 + 0.003, -d / 2 + 0.02, C.glass, C.glass, EDGE_GLOW);
@@ -1799,7 +1801,7 @@ function buildModel(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f: Fur
       sink(b, w, d, h);
       break;
     case "bathtub":
-      bathtub(b, w, d, h);
+      bathtub(b, w, d, h, !f.no_water);
       break;
     case "shower":
       shower(b, w, d, h);
@@ -1808,7 +1810,7 @@ function buildModel(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f: Fur
       wc(b, w, d, h);
       break;
     case "washbasin":
-      washbasin(b, w, d, h);
+      washbasin(b, w, d, h, !f.no_water);
       break;
     case "tv_board":
       tvBoard(b, w, d, h);

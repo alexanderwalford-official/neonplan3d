@@ -12159,7 +12159,12 @@ export class Fp3dEditor extends LitElement {
             >
           </div>`
         : nothing}
-      ${isElectric(f.type) ? this.renderFurnitureLinks(f) : !NO_STATE_TYPES.has(f.type) ? html`<div class="fp3d-form fp3d-links">${this.renderStateLinks(f)}</div>` : nothing} ${GANG_TYPES.has(f.type) ? this.renderGangsForm(f) : nothing} ${TECH_TYPES.has(f.type) ? this.renderTechForm(f) : nothing} ${CUSTOM_TYPES.has(f.type) ? this.renderCustomForm(f) : nothing} ${f.type === "parking" ? this.renderParkingForm(f) : nothing} ${f.type === "neon_sign" ? this.renderSignForm(f) : nothing} ${f.type === "waste_bin" || f.type === "mailbox" ? this.renderHouseholdForm(f) : this.renderHouseholdExtras(f)}
+      ${isElectric(f.type) ? this.renderFurnitureLinks(f) : !NO_STATE_TYPES.has(f.type) ? html`<div class="fp3d-form fp3d-links">${this.renderStateLinks(f)}</div>` : nothing} ${GANG_TYPES.has(f.type) ? this.renderGangsForm(f) : nothing} ${TECH_TYPES.has(f.type) ? this.renderTechForm(f) : nothing} ${CUSTOM_TYPES.has(f.type) ? this.renderCustomForm(f) : nothing} ${f.type === "bathtub" || f.type === "washbasin"
+        ? html`<div class="fp3d-form"><label class="fp3d-check fp3d-wide"
+            ><input type="checkbox" .checked=${!f.no_water} ?disabled=${!this.isAdmin} @change=${(ev: Event) => this.updateFurniture({ no_water: (ev.target as HTMLInputElement).checked ? undefined : true })} />
+            ${this.t("show_water" as I18nKey)}</label
+          ></div>`
+        : nothing} ${f.type === "parking" ? this.renderParkingForm(f) : nothing} ${f.type === "neon_sign" ? this.renderSignForm(f) : nothing} ${f.type === "waste_bin" || f.type === "mailbox" ? this.renderHouseholdForm(f) : this.renderHouseholdExtras(f)}
       ${this.renderShowIf(f)}
       ${this.renderModuleFurnitureFields(f)}
       ${f.type.startsWith("pack:mastershort.vehicles:") && this.isAdmin
