@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HOLD_MS, motionFigures, motionFiguresOn, motionSensorReport, sawSomeone, SOMEONE_COLOR } from "./motion-figures.ts";
+import { forgetSeen, HOLD_MINUTES, holdMs, motionFigures, motionFiguresOn, motionSensorReport, sawSomeone, SOMEONE_COLOR } from "./motion-figures.ts";
+
+const HOLD_MS = HOLD_MINUTES * 60_000;
 import { emptyBuilding, newFloor } from "./model.ts";
 import type { HomeAssistant } from "./types.ts";
 
@@ -9,6 +11,7 @@ const ago = (ms: number) => new Date(NOW - ms).toISOString();
 
 /** Sensors on a device in the "bedroom" area (the area comes from the device, as with most sensors). */
 function setup(states: Record<string, { state: string; device_class?: string; changed?: string }>, area = "bedroom") {
+  forgetSeen();
   const hass = {
     states: Object.fromEntries(
       Object.entries(states).map(([id, s]) => [id, { entity_id: id, state: s.state, last_changed: s.changed ?? ago(1000), attributes: s.device_class ? { device_class: s.device_class } : {} }]),
@@ -66,4 +69,22 @@ test("fork: the plan can switch the unnamed figures off", () => {
   b.settings.motion_figures = false;
   assert.equal(motionFiguresOn(b), false);
   assert.equal(motionFigures(hass, b, new Set(), "x", NOW).length, 0);
+});
+
+test("fork: once this screen saw someone, the figure holds even if Home Assistant's clock disagrees", () => {
+  const { hass, b } = setup({ "binary_sensor.m": { state: "on", device_class: "occupancy" } });
+  assert.equal(motionFigures(hass, b, new Set(), "x", NOW).length, 1);
+  // cleared, with a last_changed far in the past (a tablet clock ahead of Home Assistant's)
+  hass.states["binary_sensor.m"] = { ...hass.states["binary_sensor.m"], state: "off", last_changed: ago(HOLD_MS * 3) };
+  assert.equal(motionFigures(hass, b, new Set(), "x", NOW + 60_000).length, 1);
+  assert.equal(motionFigures(hass, b, new Set(), "x", NOW + HOLD_MS + 1000).length, 0);
+});
+
+test("fork: the hold time is the plan's own, 10 minutes without one", () => {
+  const { b } = setup({});
+  assert.equal(holdMs(b), 10 * 60_000);
+  b.settings.motion_hold = 30;
+  assert.equal(holdMs(b), 30 * 60_000);
+  b.settings.motion_hold = 9999;
+  assert.equal(holdMs(b), 240 * 60_000);
 });

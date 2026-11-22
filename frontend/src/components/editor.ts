@@ -26,7 +26,7 @@ import { weatherEntity, isRainSource } from "../weather.ts";
 import { isOutageSource } from "../outage.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { hasFeature, labOn, manualUrl, registerUrl, released, shopUrl, UNRELEASED } from "../features.ts";
-import { motionFiguresOn, motionSensorReport } from "../motion-figures.ts";
+import { HOLD_MAX_MINUTES, HOLD_MINUTES, holdMs, motionFiguresOn, motionSensorReport } from "../motion-figures.ts";
 import { CLIMATE_SENSOR, CUSTOM_TYPES, PROP_GLOW, PROP_SHAPES, propColor, propGlow, propShape, refOf } from "../custom-items.ts";
 import { fitText, type HintKey } from "../fit-hints.ts";
 import { FINISH_ROLES, FINISH_SWATCHES, finishHex, finishRolesOf, type FinishRole } from "../finishes.ts";
@@ -12754,6 +12754,24 @@ export class Fp3dEditor extends LitElement {
         ${this.t("motion_figures")}</label
       >
       <p class="fp3d-sub">${this.t("motion_figures_hint")}</p>
+      ${motionFiguresOn(this._doc)
+        ? html`<label class="fp3d-field"
+            >${this.t("motion_hold")}
+            <input
+              type="number"
+              min="1"
+              max=${HOLD_MAX_MINUTES}
+              step="1"
+              .value=${String(holdMs(this._doc) / 60_000)}
+              @change=${(e: Event) => {
+                const v = Math.round(Number((e.target as HTMLInputElement).value));
+                const next = structuredClone(this._doc);
+                if (Number.isFinite(v) && v >= 1 && v !== HOLD_MINUTES) next.settings.motion_hold = Math.min(HOLD_MAX_MINUTES, v);
+                else delete next.settings.motion_hold;
+                this.setDoc(next);
+              }}
+          /></label>`
+        : nothing}
       ${this.renderMotionReport()}
     </details>`;
   }

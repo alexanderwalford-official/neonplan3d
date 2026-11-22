@@ -14,13 +14,31 @@ import type { HomeAssistant } from "./types.ts";
 
 /** The sensors' kinds that mean someone is there. */
 const SOMEONE = new Set(["motion", "occupancy", "presence"]);
-/** How long the figure stays after the sensor cleared. */
-export const HOLD_MS = 3 * 60_000;
+/** How long the figure stays after the sensor cleared, unless the plan says otherwise (settings.motion_hold, minutes). */
+export const HOLD_MINUTES = 10;
+export const HOLD_MAX_MINUTES = 240;
 /** A neutral grey: not one of the named people's colours. */
 export const SOMEONE_COLOR = "#a7b0bb";
 
 export function motionFiguresOn(building: Building | null | undefined): boolean {
   return building?.settings.motion_figures !== false;
+}
+
+/** The plan's hold time in milliseconds. */
+export function holdMs(building: Building | null | undefined): number {
+  const m = building?.settings.motion_hold;
+  return (typeof m === "number" && m >= 1 ? Math.min(HOLD_MAX_MINUTES, m) : HOLD_MINUTES) * 60_000;
+}
+
+/**
+ * When this screen last saw each sensor report someone. The hold counts from here as well as from Home Assistant's
+ * last_changed: a tablet's clock running ahead of Home Assistant's ended the hold the moment the sensor cleared.
+ */
+const lastSeen = new Map<string, number>();
+
+/** For tests: forget what was seen. */
+export function forgetSeen(): void {
+  lastSeen.clear();
 }
 
 /** Every motion, occupancy or presence sensor by its Home Assistant area (`skip`: sensors that mean something else). */
@@ -35,14 +53,21 @@ export function motionSensorsByArea(hass: HomeAssistant, skip: ReadonlySet<strin
   return out;
 }
 
-/** Whether a sensor sees someone now, or did within the hold time. */
-export function sawSomeone(hass: HomeAssistant, id: string, now = Date.now()): boolean {
+/** Whether a sensor sees someone now, or did within the hold time (`hold` in ms). */
+export function sawSomeone(hass: HomeAssistant, id: string, now = Date.now(), hold = HOLD_MINUTES * 60_000): boolean {
   const st = hass.states[id];
   if (!st) return false;
-  if (st.state === "on") return true;
+  if (st.state === "on") {
+    lastSeen.set(id, now);
+    return true;
+  }
+  // seen by this screen (any state after it: cleared, or briefly unavailable)
+  const seen = lastSeen.get(id);
+  if (seen !== undefined && now - seen < hold) return true;
+  // or, after a reload, by Home Assistant's own time of the change to "clear"
   if (st.state !== "off") return false;
   const changed = Date.parse(String(st.last_changed ?? ""));
-  return Number.isFinite(changed) && now - changed < HOLD_MS;
+  return Number.isFinite(changed) && now - changed < hold;
 }
 
 /**
@@ -53,11 +78,14 @@ export function motionFigures(hass: HomeAssistant, building: Building, taken: Re
   if (!motionFiguresOn(building)) return [];
   // a parking spot's occupancy sensor says a car stands there, not a person
   const byArea = motionSensorsByArea(hass, new Set(parkingEntities(building.floors)));
+  const hold = holdMs(building);
   const out: PersonMarker[] = [];
   for (const floor of building.floors) {
     for (const room of floor.rooms) {
-      if (room.points.length < 3 || taken.has(room.id) || !room.area_id) continue;
-      const sensors = (byArea.get(room.area_id) ?? []).filter((id) => sawSomeone(hass, id, now));
+      if (room.points.length < 3 || !room.area_id) continue;
+      // every sensor is looked at (also in a room a named person holds), so this screen remembers when it saw someone
+      const sensors = (byArea.get(room.area_id) ?? []).filter((id) => sawSomeone(hass, id, now, hold));
+      if (taken.has(room.id)) continue;
       if (!sensors.length) continue;
       const [cx, cz] = innerPoint(room.points);
       const a = -Math.PI / 2 + 0.9;

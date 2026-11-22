@@ -919,6 +919,8 @@ SETTINGS_SCHEMA = vol.Schema(
         vol.Optional("person_look", default=None): vol.Any(None, vol.In(["figure", "pin", "off"])),
         # fork: false = no unnamed figure in rooms whose motion sensor is on
         vol.Optional("motion_figures"): vol.Any(None, bool),
+        # fork: minutes the unnamed figure stays after its sensor cleared
+        vol.Optional("motion_hold"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1, max=240))),
         # plan lock: rooms, walls, doors, windows and outdoor areas cannot be moved by accident
         vol.Optional("lock_plan", default=False): bool,
         # size of the room names in 3D (1 = as before)

@@ -1126,7 +1126,8 @@ export const deEditor = {
   presence_hint: "Raumsensor je Person (z. B. ESPresense, Bermuda): sein Zustand nennt den Raum oder Bereich.",
   motion_figures: "Jemand in Räumen mit Bewegung zeigen",
   motion_figures_hint:
-    "Eine Figur ohne Namen in jedem Raum, dessen Bewegungs-, Belegungs- oder Präsenzsensor jemanden gesehen hat – bis 3 Minuten danach (der Sensor gehört über seinen Home-Assistant-Bereich zum Raum).",
+    "Eine Figur ohne Namen in jedem Raum, dessen Bewegungs-, Belegungs- oder Präsenzsensor jemanden gesehen hat – und noch eine Weile danach, damit sie bleibt, wenn du still sitzt (der Sensor gehört über seinen Home-Assistant-Bereich zum Raum).",
+  motion_hold: "Bleibt nach der letzten Bewegung (Minuten)",
   motion_found: "Gefundene Sensoren (● = sieht gerade jemanden):",
   motion_unlinked: "In einem Bereich, mit dem kein Raum verknüpft ist – verknüpfe den Raum mit diesem Bereich:",
   motion_none: "Kein Bewegungs-, Belegungs- oder Präsenzsensor mit einem Bereich gefunden. Gib dem Sensor (oder seinem Gerät) in Home Assistant den Bereich seines Raums.",
@@ -2298,7 +2299,8 @@ const enEditor: Record<EditorKey, string> = {
   presence_hint: "Room sensor per person (e.g. ESPresense, Bermuda): its state names the room or area.",
   motion_figures: "Show someone in rooms with motion",
   motion_figures_hint:
-    "An unnamed figure in every room whose motion, occupancy or presence sensor saw someone – until 3 minutes after (the sensor belongs to the room by its Home Assistant area).",
+    "An unnamed figure in every room whose motion, occupancy or presence sensor saw someone – and for a while after, so it stays while you sit still (the sensor belongs to the room by its Home Assistant area).",
+  motion_hold: "Stays after the last motion (minutes)",
   motion_found: "Sensors found (● = sees someone now):",
   motion_unlinked: "In an area no room is linked to – link the room to this area:",
   motion_none: "No motion, occupancy or presence sensor with an area found. Give the sensor (or its device) its room's area in Home Assistant.",
