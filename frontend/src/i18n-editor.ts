@@ -1124,6 +1124,9 @@ export const deEditor = {
   energy_import_none: "Im Energie-Dashboard sind keine passenden Leistungssensoren (W) zu finden – bitte von Hand wählen.",
   energy_import_failed: "Das Energie-Dashboard von Home Assistant ist nicht eingerichtet.",
   presence_hint: "Raumsensor je Person (z. B. ESPresense, Bermuda): sein Zustand nennt den Raum oder Bereich.",
+  motion_figures: "Jemand in Räumen mit Bewegung zeigen",
+  motion_figures_hint:
+    "Eine Figur ohne Namen in jedem Raum, dessen Bewegungs-, Belegungs- oder Präsenzsensor gerade an ist (der Sensor gehört über seinen Home-Assistant-Bereich zum Raum).",
   presence_sensor: "Raumsensor",
   no_persons: "In Home Assistant gibt es keine Personen.",
   diag_title: "Hilf mit, NeonPlan besser zu machen",
@@ -2290,6 +2293,9 @@ const enEditor: Record<EditorKey, string> = {
   energy_import_none: "No matching power sensors (W) were found in the energy dashboard – please choose them by hand.",
   energy_import_failed: "Home Assistant's energy dashboard is not set up.",
   presence_hint: "Room sensor per person (e.g. ESPresense, Bermuda): its state names the room or area.",
+  motion_figures: "Show someone in rooms with motion",
+  motion_figures_hint:
+    "An unnamed figure in every room whose motion, occupancy or presence sensor is on right now (the sensor belongs to the room by its Home Assistant area).",
   presence_sensor: "Room sensor",
   no_persons: "There are no people in Home Assistant.",
   diag_title: "Help make NeonPlan better",

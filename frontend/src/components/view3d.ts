@@ -133,6 +133,7 @@ import { OSM_COPYRIGHT } from "../surroundings.ts";
 import { coverPositionable, lightAbilities } from "./quick-menu.ts";
 import "./quick-menu.ts";
 import { load3d } from "../load3d.ts";
+import { motionFigures } from "../motion-figures.ts";
 import { CLIMATE_SENSOR, CUSTOM_TYPES, climateReading, customEntities, hexToRgb, propGlow, refOf } from "../custom-items.ts";
 import { loadFun } from "../load-fun.ts";
 import { detectionKind, scaleGlow, buildMarkers, cameraMotionSensors, openMoreInfo, setCameraSensors, stateText, toggleEntity } from "../markers.ts";
@@ -1801,7 +1802,10 @@ export class Fp3dView3d extends LitElement {
       ...lawnSnow(b, snow),
     ]);
     const roomSensors = SHOW_PRESENCE ? personsInRooms(hass, b) : [];
-    const persons = released("locate") && personsShown(b) ? [...roomSensors, ...locatedPersons(hass, b, new Set(roomSensors.map((p) => p.id)))] : roomSensors;
+    const named = released("locate") && personsShown(b) ? [...roomSensors, ...locatedPersons(hass, b, new Set(roomSensors.map((p) => p.id)))] : roomSensors;
+    // fork (motion-figures.ts): an unnamed figure in rooms whose motion sensor is on and where no named person stands
+    const someone = personsShown(b) ? motionFigures(hass, b, new Set(named.map((p) => p.roomId)), translate(hass, "someone")) : [];
+    const persons = [...named, ...someone];
     v.setPersonLook(personLook(b) === "pin" ? "pin" : "figure");
     v.setPersons([...persons, ...this.moduleFigures(b)]);
     this.lastPersons = persons.map((p) => ({ id: p.id, floorId: p.floorId, roomId: p.roomId }));

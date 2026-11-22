@@ -1453,6 +1453,7 @@ const de = {
   now_setting_hint: "Das Haus ohne Kopfzeile, unten eine Leiste: Jetzt (was los ist, mit „Alle aus“ und dem Haus-Check), die Räume je Etage, die Rollläden und Mehr.",
   floor_open: "{n} offen",
   floor_persons: "{n} Pers.",
+  floor_persons_one: "1 Pers.",
   energy_consumption: "Verbrauch",
   energy_grid_import: "Netzbezug",
   energy_grid_export: "Einspeisung",
@@ -1466,6 +1467,7 @@ const de = {
   tool_meter: "Zähler",
   hint_meter: "Auf die Stelle des Zählers tippen",
   presence: "Anwesenheit",
+  someone: "Jemand",
 };
 
 type Key = keyof typeof de | EditorKey;
@@ -2920,6 +2922,7 @@ const en: Record<keyof typeof de, string> = {
   now_setting_hint: "The house without its header, and a bar at the bottom: Now (what is going on, with “All off” and the house check), the rooms by floor, the blinds and More.",
   floor_open: "{n} open",
   floor_persons: "{n} people",
+  floor_persons_one: "1 person",
   energy_consumption: "Consumption",
   energy_grid_import: "Grid import",
   energy_grid_export: "Export",
@@ -2933,6 +2936,7 @@ const en: Record<keyof typeof de, string> = {
   tool_meter: "Meter",
   hint_meter: "Tap the spot of the meter",
   presence: "Presence",
+  someone: "Someone",
 };
 
 export type I18nKey = Key;

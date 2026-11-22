@@ -850,6 +850,8 @@ export interface BuildingSettings extends StylePlan {
   editor_floor?: string | null;
   /** Located people in 3D: a neon figure (null = default), a pin, or not shown. */
   person_look?: "figure" | "pin" | "off" | null;
+  /** Fork (motion-figures.ts): false = no unnamed figure in rooms whose motion sensor is on (null/true = shown). */
+  motion_figures?: boolean | null;
   /** Fun pack "Halloween": the ghost that floats through the house now and then (on unless switched off). */
   halloween?: { ghost?: boolean } | null;
   /** Fun pack "Winter & Christmas": fairy lights along the eaves, snow on roof and lawn, the New Year's firework (winter.ts). */

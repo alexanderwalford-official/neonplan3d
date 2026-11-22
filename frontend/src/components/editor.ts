@@ -26,6 +26,7 @@ import { weatherEntity, isRainSource } from "../weather.ts";
 import { isOutageSource } from "../outage.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { hasFeature, labOn, manualUrl, registerUrl, released, shopUrl, UNRELEASED } from "../features.ts";
+import { motionFiguresOn } from "../motion-figures.ts";
 import { CLIMATE_SENSOR, CUSTOM_TYPES, PROP_GLOW, PROP_SHAPES, propColor, propGlow, propShape, refOf } from "../custom-items.ts";
 import { fitText, type HintKey } from "../fit-hints.ts";
 import { FINISH_ROLES, FINISH_SWATCHES, finishHex, finishRolesOf, type FinishRole } from "../finishes.ts";
@@ -12738,6 +12739,21 @@ export class Fp3dEditor extends LitElement {
           : html`<p class="fp3d-sub fp3d-wide">${this.t("no_persons")}</p>`}
       </div>
       <p class="fp3d-sub">${this.t("presence_hint")}</p>
+      <label class="fp3d-check"
+        ><input
+          type="checkbox"
+          .checked=${motionFiguresOn(this._doc)}
+          @change=${(e: Event) => {
+            // fork (motion-figures.ts): unnamed figures in rooms whose motion sensor is on
+            const next = structuredClone(this._doc);
+            if ((e.target as HTMLInputElement).checked) delete next.settings.motion_figures;
+            else next.settings.motion_figures = false;
+            this.setDoc(next);
+          }}
+        />
+        ${this.t("motion_figures")}</label
+      >
+      <p class="fp3d-sub">${this.t("motion_figures_hint")}</p>
     </details>`;
   }
 

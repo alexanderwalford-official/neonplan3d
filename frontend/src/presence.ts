@@ -385,6 +385,7 @@ export function floorInfoText(hass: HomeAssistant | undefined, c: FloorCounts): 
   const parts = [c.rooms === 1 ? translate(hass, "floor_rooms_one") : translate(hass, "floor_rooms", { n: c.rooms })];
   if (c.lightsOn) parts.push(translate(hass, "floor_lights", { n: c.lightsOn }));
   if (c.open) parts.push(translate(hass, "floor_open", { n: c.open }));
-  if (c.persons) parts.push(translate(hass, "floor_persons", { n: c.persons }));
+  // fork: "1 person", not "1 people"
+  if (c.persons) parts.push(c.persons === 1 ? translate(hass, "floor_persons_one") : translate(hass, "floor_persons", { n: c.persons }));
   return parts.join(" · ");
 }

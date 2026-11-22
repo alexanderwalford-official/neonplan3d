@@ -917,6 +917,8 @@ SETTINGS_SCHEMA = vol.Schema(
         vol.Optional("units", default=None): vol.Any(None, vol.In(["metric", "imperial"])),
         # located people in 3D: a neon figure (None = default), a pin, or not at all
         vol.Optional("person_look", default=None): vol.Any(None, vol.In(["figure", "pin", "off"])),
+        # fork: false = no unnamed figure in rooms whose motion sensor is on
+        vol.Optional("motion_figures"): vol.Any(None, bool),
         # plan lock: rooms, walls, doors, windows and outdoor areas cannot be moved by accident
         vol.Optional("lock_plan", default=False): bool,
         # size of the room names in 3D (1 = as before)
