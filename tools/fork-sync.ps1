@@ -15,7 +15,7 @@
   are expected and solved by rebuilding them; any other conflict stops the run (nothing is changed) and lists the
   files. Then, inside WSL (tools/fork-sync-wsl.sh): npm ci, typecheck, frontend tests, build with the size budgets,
   Python tests and ruff - the same checks as upstream's CI. Only when all of them pass is the rebuild committed,
-  'unlocked' pushed to the fork and a release v<version>-unlocked.<n> published with neonplan3d.zip, which HACS
+  'unlocked' pushed to the fork and a release v<version>.<1000+n> (e.g. v4.0.0.1011) published with neonplan3d.zip, which HACS
   installs. Last, the release is downloaded the way HACS does.
 
   Needs: git and the GitHub CLI (gh, signed in) on Windows, WSL with Ubuntu. Node 24 and Python 3.13 are installed
@@ -176,9 +176,18 @@ if ($NoRelease) {
 $version = (Get-Content -Raw (Join-Path $Repo 'custom_components/neonplan3d/manifest.json') | ConvertFrom-Json).version
 $tags = @(& gh release list -R $Fork --limit 200 --json tagName -q '.[].tagName')
 if ($LASTEXITCODE -ne 0) { Stop-Sync "cannot list the fork's releases" }
+# Tags are v<version>.<1001...9999>: a fourth version part of fixed width. GitHub lists a repository's releases by day
+# and then by tag name as text, and HACS takes the first one as the newest - "unlocked.10" sorted below
+# "unlocked.9" and HACS never saw it. Four digits keep text order and number order the same; "." sorts above the old
+# "-unlocked.<n>" tags, and AwesomeVersion (HACS) counts v4.0.0.1011 as newer than v4.0.0-unlocked.9.
 $n = 0
-foreach ($t in $tags) { if ($t -match "^v$([regex]::Escape($version))-unlocked\.(\d+)$") { $n = [Math]::Max($n, [int]$Matches[1]) } }
-$newTag = "v$version-unlocked.$($n + 1)"
+foreach ($t in $tags) {
+  if ($t -match "^v$([regex]::Escape($version))\.(\d{4})$") { $n = [Math]::Max($n, [int]$Matches[1] - 1000) }
+  # the releases before the new numbering count on from where they ended
+  elseif ($t -match "^v$([regex]::Escape($version))-unlocked\.(\d+)$") { $n = [Math]::Max($n, [int]$Matches[1]) }
+}
+if ($n + 1 -gt 8999) { Stop-Sync "release number $($n + 1) does not fit the four digits of the tag" }
+$newTag = "v$version.$(1000 + $n + 1)"
 
 Write-Step "Pushing '$Branch' to $Fork"
 Invoke-Git push --quiet fork $Branch
